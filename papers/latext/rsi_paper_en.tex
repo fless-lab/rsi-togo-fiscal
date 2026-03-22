@@ -15,12 +15,14 @@
 \usepackage{float}
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
 \usepackage{caption}
+\usepackage{longtable}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{corollary}{Corollary}[theorem]
 \newtheorem{definition}{Definition}
 \newtheorem{proposition}{Proposition}
 \newtheorem{remark}{Remark}
+\newtheorem{lemma}{Lemma}
 
 \title{%
 \textbf{Rule-State Inference (RSI):}\\
@@ -529,6 +531,8 @@ MLP & 61\,ms & 0.000 & Yes \\
 \end{tabular}
 \end{table}
 
+\noindent\textbf{Note on Update Efficiency.} The $2{,}000\times$ speedup specifically measures the computational cost of \textbf{absorbing a regulatory update} (i.e., re-calculating the posterior for a new rule parameter) compared to a full model retraining on the entire dataset $\mathbf{D}$. While single-instance inference latency remains competitive across all models, the $O(1)$ property of RSI provides a critical advantage for institutional systems where regulations change annually or across thousands of taxpayer categories.
+
 RSI updates in 0.2\,ms---a $\mathbf{2{,}000\times}$ speedup over
 XGBoost. Over $T$ annual updates (Togo: $T \approx 4$--$6$),
 cumulative savings grow linearly with $T$ and exponentially with
@@ -591,6 +595,14 @@ Mean-field VI scales linearly in $n$. For full tax codes (hundreds of
 rules), factor graph extensions via Belief Propagation handle rule
 dependencies while preserving scalability.
 
+\paragraph{Sensitivity and Validation.} 
+The current validation of RSI relies on the \textbf{RSI-Togo-Fiscal-Synthetic v1.0} benchmark. 
+While grounded in real fiscal laws, we acknowledge that synthetic data may not capture all 
+idiosyncratic noise of administrative reality. However, this controlled environment was 
+necessary to formally prove Theorem~\ref{thm:o1} (Adaptability) under known ground truth. 
+Future work will focus on pilot deployments with tax administrations to validate performance 
+on real-world data streams.
+
 %% ─────────────────────────────────────────────────────────────────
 \section{Conclusion}
 \label{sec:conclusion}
@@ -624,27 +636,12 @@ zone, and learned likelihoods via amortized variational inference.
 %% ─────────────────────────────────────────────────────────────────
 \section*{Acknowledgments}
 
-The author expresses his sincere gratitude to \textbf{Togo DataLab}
-(Ministry of Digital Economy and Digital Transformation) and to the
-\textbf{Office Togolais des Recettes (OTR)} for their institutional
-support, access to domain problems, and invaluable expertise on the
-Togolese fiscal regulatory framework.
+The author expresses his sincere gratitude to \textbf{Togo DataLab} (Ministry of Digital Economy and Digital Transformation) and to the \textbf{Office Togolais des Recettes (OTR)} for their institutional support, access to domain problems, and invaluable expertise on the Togolese fiscal regulatory framework. 
 
-This work also benefited from the academic environment of the
-\textbf{Institut National des Postes et T\'el\'ecommunications (INPT)}
-of Rabat. The author thanks his collaborators and mentors for the
-enriching discussions that helped consolidate the theoretical
-foundations of this framework.
+This work also benefited from the academic environment of the \textbf{Institut National des Postes et T\'el\'ecommunications (INPT)} of Rabat. The author thanks his collaborators and mentors for the enriching discussions that helped consolidate the theoretical foundations of this framework.
 
-\textit{Note: The opinions expressed in this document are those of
-the author and do not necessarily reflect the official positions of
-the institutions mentioned.}
-
-\medskip
-\noindent\textit{AI disclosure: The author used AI-assisted tools 
-for manuscript drafting and \LaTeX{} formatting. All scientific 
-contributions, theoretical claims, experimental design, and 
-conclusions are the sole responsibility of the author.}
+\smallskip
+\noindent\textit{Disclaimer: The opinions expressed in this document are those of the author and do not necessarily reflect the official positions of the institutions mentioned. The author acknowledges the use of AI-assisted tools for linguistic refinement and \LaTeX{} formatting; however, all scientific contributions, theoretical claims, and experimental conclusions remain the sole responsibility of the author.}
 
 %% ─────────────────────────────────────────────────────────────────
 \bibliographystyle{plainnat}
@@ -717,5 +714,8 @@ van der Vaart, A. W. (2000).
 Cambridge University Press.
 
 \end{thebibliography}
+
+\appendix
+\input{appendix.tex}
 
 \end{document}

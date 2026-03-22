@@ -1,48 +1,4 @@
-\documentclass[letterpaper]{article}
-\usepackage[margin=1in]{geometry}
-\usepackage{times}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{amsmath,amssymb,amsthm}
-\usepackage{booktabs}
-\usepackage{array}
-\usepackage{longtable}
-\usepackage{xcolor}
-\usepackage[colorlinks=true,linkcolor=blue,citecolor=green!60!black,urlcolor=blue]{hyperref}
-\usepackage{microtype}
-\usepackage{enumitem}
-\usepackage{float}
-\usepackage{caption}
-
-\newtheorem{theorem}{Theorem}
-\newtheorem{corollary}{Corollary}[theorem]
-\newtheorem{lemma}{Lemma}
-\newtheorem{definition}{Definition}
-
-\title{%
-\textbf{Rule-State Inference (RSI) ---}\\
-\textbf{Supplementary Material}\\[0.4em]
-\large\textit{Appendices A, B, C}
-}
-\author{Abdou-Raouf Atarmla}
-\date{2026}
-
-\begin{document}
-\maketitle
-\thispagestyle{empty}
-
-\noindent This document contains supplementary material for the paper
-\emph{Rule-State Inference (RSI): A Bayesian Framework for Compliance
-Monitoring in Rule-Governed Domains}. It includes the dataset
-dictionary (Appendix~A), complete theorem proofs (Appendix~B), and
-reproducibility details (Appendix~C).
-
-\tableofcontents
 \newpage
-
-%% ─────────────────────────────────────────────────────────────────
-\appendix
-
 \section{Dataset Dictionary: RSI-Togo-Fiscal-Synthetic v1.0}
 \label{app:dataset}
 
@@ -64,7 +20,7 @@ Each row is structured in four layers:
 
 \subsection{Column Reference}
 
-\begin{longtable}{lp{2.2cm}p{7.5cm}}
+\begin{longtable}{lp{2.2cm}p{7.2cm}}
 \toprule
 \textbf{Column} & \textbf{Type} & \textbf{Description} \\
 \midrule
@@ -289,7 +245,19 @@ complete proof.
         the Fisher information matrix is positive definite.
 \end{itemize}
 
+\medskip
+\noindent\textbf{Clarification on mixed spaces.}
+While the latent space $\mathbf{S}$ contains discrete variables $a_i$,
+the mean-field variational approximation $Q_\phi$ operates on the
+continuous variational parameters $\rho_i = \mathbb{E}_{Q}[a_i] \in (0,1)$.
+This relaxation defines a continuous optimization landscape in the
+variational parameter space where the second-order Taylor expansion holds.
+Consequently, the variational posterior inherits concentration properties
+analogous to the Bernstein-von Mises theorem for the continuous components,
+while $a_i$ achieves model selection consistency asymptotically.
+
 \begin{theorem}[BvM Consistency --- complete]
+\label{thm:bvm_complete}
 Under conditions C1--C4, as $m \to \infty$:
 \[
   \sqrt{m}\bigl(\hat{\mathbf{S}}_m - \mathbf{S}^*\bigr)
@@ -517,25 +485,3 @@ the full experiment pipeline is approximately 5--10 minutes.
 
 All experiments use \texttt{numpy.random.seed(42)} for reproducibility.
 Dataset generation uses \texttt{numpy.random.default\_rng(42)}.
-
-%% ─────────────────────────────────────────────────────────────────
-\begin{thebibliography}{9}
-
-\bibitem[Gabaix(2009)]{gabaix2009power}
-Gabaix, X. (2009).
-Power laws in economics and finance.
-\textit{Annual Review of Economics}, 1(1):255--294.
-
-\bibitem[Blei et al.(2017)]{blei2017variational}
-Blei, D. M., Kucukelbir, A., and McAuliffe, J. D. (2017).
-Variational inference: A review for statisticians.
-\textit{Journal of the American Statistical Association}, 112(518):859--877.
-
-\bibitem[van der Vaart(2000)]{van2000asymptotic}
-van der Vaart, A. W. (2000).
-\textit{Asymptotic Statistics}.
-Cambridge University Press.
-
-\end{thebibliography}
-
-\end{document}
