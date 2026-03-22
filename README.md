@@ -46,11 +46,15 @@ Three theoretical guarantees are proven:
 rsi-togo-fiscal/
 ├── paper/
 │   ├── latex/
-│   │   ├── rsi_paper_en.tex      # English version (Overleaf-ready)
-│   │   └── rsi_paper_fr.tex      # French version (Overleaf-ready)
+│   │   ├── rsi_paper_en.tex
+│   │   └── rsi_paper_fr.tex
+│   │   ├── rsi_paper_appendix_en.tex
+│   │   └── rsi_paper_appendix_fr.tex      
 │   └── pdf/
 │       ├── rsi_paper_en.pdf
 │       └── rsi_paper_fr.pdf
+│       └── rsi_paper_appendix_en.pdf
+│       └── rsi_paper_appendix_fr.pdf
 ├── data/
 │   └── rsi_dataset.csv           # RSI-Togo-Fiscal-Synthetic v1.0
 ├── src/
