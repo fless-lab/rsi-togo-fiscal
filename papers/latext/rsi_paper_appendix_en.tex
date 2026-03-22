@@ -20,7 +20,7 @@ Each row is structured in four layers:
 
 \subsection{Column Reference}
 
-\begin{longtable}{lp{2.2cm}p{7.2cm}}
+\begin{longtable}{lp{2.2cm}p{6cm}}
 \toprule
 \textbf{Column} & \textbf{Type} & \textbf{Description} \\
 \midrule
@@ -483,5 +483,7 @@ the full experiment pipeline is approximately 5--10 minutes.
 
 \subsection{Random Seeds}
 
-All experiments use \texttt{numpy.random.seed(42)} for reproducibility.
+\begin{flushleft}
+All experiments use \texttt{numpy.random.seed(42)} for reproducibility. \\
 Dataset generation uses \texttt{numpy.random.default\_rng(42)}.
+\end{flushleft}
