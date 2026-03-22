@@ -1,0 +1,541 @@
+\documentclass[letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=green!60!black,urlcolor=blue]{hyperref}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{caption}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+
+\title{%
+\textbf{Rule-State Inference (RSI) ---}\\
+\textbf{Supplementary Material}\\[0.4em]
+\large\textit{Appendices A, B, C}
+}
+\author{Abdou-Raouf Atarmla}
+\date{2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent This document contains supplementary material for the paper
+\emph{Rule-State Inference (RSI): A Bayesian Framework for Compliance
+Monitoring in Rule-Governed Domains}. It includes the dataset
+dictionary (Appendix~A), complete theorem proofs (Appendix~B), and
+reproducibility details (Appendix~C).
+
+\tableofcontents
+\newpage
+
+%% ─────────────────────────────────────────────────────────────────
+\appendix
+
+\section{Dataset Dictionary: RSI-Togo-Fiscal-Synthetic v1.0}
+\label{app:dataset}
+
+\subsection{Overview}
+
+The dataset contains 2,000 synthetic enterprises across two regulatory
+periods (2022--2024 and 2025), generated from real OTR fiscal rules.
+Each row is structured in four layers:
+
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{Enterprise features}: observable entity attributes
+  \item \textbf{Latent ground truth} (\texttt{gt\_*}): the true rule
+        state $(a_i, c_i, \delta_i)$, never seen by RSI during inference
+  \item \textbf{Noisy observations} (\texttt{obs\_*}): what a fiscal
+        system actually observes
+  \item \textbf{Binary labels} (\texttt{label\_*}): derived compliance
+        labels for baseline evaluation
+\end{enumerate}
+
+\subsection{Column Reference}
+
+\begin{longtable}{lp{2.2cm}p{7.5cm}}
+\toprule
+\textbf{Column} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Column} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\small Continued on next page} \\
+\endfoot
+\bottomrule
+\endlastfoot
+
+\multicolumn{3}{l}{\textit{Identifiers}} \\[2pt]
+\texttt{enterprise\_id} & string & Unique enterprise identifier (e.g., ENT\_00001) \\
+\texttt{period} & string & Regulatory period: \texttt{2022\_2024} or \texttt{2025} \\[6pt]
+
+\multicolumn{3}{l}{\textit{Enterprise features}} \\[2pt]
+\texttt{sector} & string & Economic sector (commerce, services, BTP, industrie, agriculture, restauration, transport) \\
+\texttt{region} & string & Geographic region in Togo (Lomé, Sokodé, Kara, etc.) \\
+\texttt{ca\_segment} & string & Turnover segment: \texttt{informal} ($<$30M), \texttt{rsi} (30--100M), \texttt{reel} ($\geq$100M) \\
+\texttt{n\_employes} & int & True number of employees (log-normal distribution) \\[6pt]
+
+\multicolumn{3}{l}{\textit{Latent ground truth (gt\_*) --- not available to RSI during inference}} \\[2pt]
+\texttt{gt\_ca\_reel} & float & True annual turnover in FCFA \\
+\texttt{gt\_benefice\_reel} & float & True annual profit in FCFA \\
+\texttt{gt\_tva\_active} & int & 1 if VAT rule applies (CA $\geq$ threshold), 0 otherwise \\
+\texttt{gt\_tva\_compliance} & float & True VAT compliance rate $c_i \in [0,1]$, drawn from Beta prior \\
+\texttt{gt\_tva\_due} & float & Theoretical VAT due (FCFA) \\
+\texttt{gt\_is\_active} & int & 1 if CIT rule applies (CA $\geq$ 100M FCFA) \\
+\texttt{gt\_is\_compliance} & float & True CIT compliance rate $c_i \in [0,1]$ \\
+\texttt{gt\_is\_due} & float & Effective CIT due (max of CIT and IMF) in FCFA \\
+\texttt{gt\_tpu\_active} & int & 1 if TPU rule applies (CA $<$ 30M FCFA) \\
+\texttt{gt\_tpu\_compliance} & float & True TPU compliance rate $c_i \in [0,1]$ \\
+\texttt{gt\_irpp\_susp\_active} & int & 1 if IRPP suspension applies (salary $<$ 900k, period 2023) \\[6pt]
+
+\multicolumn{3}{l}{\textit{Noisy observations (obs\_*) --- RSI input}} \\[2pt]
+\texttt{obs\_ca\_declare} & float & Declared turnover. Generated as $\hat{x} = x \cdot \beta \cdot \varepsilon$ where $\beta \sim \text{Beta}(7,3)$ captures systematic under-declaration and $\varepsilon \sim \mathcal{N}(1, 0.045)$ captures measurement noise. Mean ratio $\mathbb{E}[\hat{x}/x] \approx 0.70$. \\
+\texttt{obs\_tva\_declaree} & float & Declared VAT amount. Zero if entity does not declare; log-normally distributed around theoretical VAT if declared. Set to \texttt{NaN} with probability 0.18 (missing). \\
+\texttt{obs\_tva\_assujetti\_declare} & bool & Whether the entity self-declared as VAT-registered \\
+\texttt{obs\_is\_declare} & float & Declared corporate income tax. Set to \texttt{NaN} with probability 0.18. \\
+\texttt{obs\_benefice\_declare} & float & Declared profit. Typically 70\% of true profit with noise. Set to \texttt{NaN} with probability 0.18. \\
+\texttt{obs\_retard\_paiement\_jours} & int & Payment delay in days. Generated from $\text{Exponential}(\lambda)$ where $\lambda = 5 / (c_{\text{regime}} + 0.1)$, with $c_{\text{regime}}$ being the compliance of the applicable regime. Higher non-compliance $\Rightarrow$ longer delays. \\
+\texttt{obs\_has\_compte\_bancaire} & bool & Whether entity has a formal bank account. $P(\text{account}) = 0.75 \cdot c + 0.20 \cdot (1-c)$ where $c$ is regime compliance. \\
+\texttt{obs\_utilise\_facturation\_electronique} & bool & Whether entity uses electronic invoicing \\
+\texttt{obs\_a\_ete\_audite} & bool & Whether entity was audited in the period (8\% base rate) \\
+\texttt{obs\_n\_employes\_declare} & int & Declared number of employees ($\approx$ 85\% of true value) \\
+\texttt{obs\_ratio\_sous\_declaration} & float & Ratio of declared to true turnover ($\hat{x}/x$) \\
+\texttt{obs\_tva\_missing} & bool & True if \texttt{obs\_tva\_declaree} is missing \\
+\texttt{obs\_is\_missing} & bool & True if \texttt{obs\_is\_declare} is missing \\
+\texttt{obs\_benefice\_missing} & bool & True if \texttt{obs\_benefice\_declare} is missing \\[6pt]
+
+\multicolumn{3}{l}{\textit{Binary labels (label\_*) --- used only for baseline evaluation}} \\[2pt]
+\texttt{label\_tva\_non\_conforme} & int & 1 if VAT active and $c_{\text{TVA}} < 0.5$ \\
+\texttt{label\_is\_non\_conforme} & int & 1 if CIT active and $c_{\text{IS}} < 0.5$ \\
+\texttt{label\_any\_non\_conforme} & int & 1 if any of: VAT non-compliant, CIT non-compliant, or TPU compliance $< 0.3$ \\
+
+\end{longtable}
+
+\subsection{Under-declaration Model}
+
+The under-declaration ratio is the key noise mechanism reflecting
+real-world fiscal behavior in Francophone Africa. For each enterprise:
+
+\[
+  \hat{x} = x \cdot \underbrace{\beta}_{\text{systematic}} \cdot
+  \underbrace{\varepsilon}_{\text{noise}}, \quad
+  \beta \sim \text{Beta}(7, 3), \quad
+  \varepsilon \sim \mathcal{N}(1,\, 0.045^2)
+\]
+
+The Beta(7,3) distribution has mean $7/10 = 0.70$ and concentrates
+mass between 0.55 and 0.85, consistent with empirical estimates from
+Sub-Saharan African fiscal studies. The Gaussian noise term captures
+accounting approximations and rounding.
+
+\subsection{Regulatory Change Event}
+
+The period \texttt{2025} encodes the VAT threshold change from 60M to
+100M FCFA enacted by Law n°2024-007 (30 December 2024). Enterprises
+with true turnover in $[60\text{M}, 100\text{M})$ FCFA shift from
+\texttt{gt\_tva\_active=1} (period 2022--2024) to \texttt{gt\_tva\_active=0}
+(period 2025), providing a clean natural experiment for evaluating
+Theorem~1 (O(1) adaptability).
+
+\subsection{Power-Law Structure}
+
+Turnover is drawn from a log-normal distribution within each segment,
+whose aggregate approximates a power law --- the universal signature
+of firm size distributions in market economies \cite{gabaix2009power}.
+The three-segment structure reproduces the concentration typical of
+African markets:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Segment} & \textbf{CA range} & \textbf{Share} \\
+\midrule
+Informal (TPU) & $<$ 30M FCFA & 60\% \\
+Intermediate (RSI) & 30M -- 100M FCFA & 25\% \\
+Large (CIT/VAT) & $\geq$ 100M FCFA & 15\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%% ─────────────────────────────────────────────────────────────────
+\section{Complete Theorem Proofs}
+\label{app:proofs}
+
+\subsection{Proof of Theorem 1: O(1) Regulatory Adaptability}
+
+We provide the complete proof including the numerical stability argument.
+
+\begin{theorem}[O(1) Adaptability --- complete]
+For any regulatory update $\mathcal{U}_k : \Theta_k \to \Theta_k'$,
+the RSI update cost is $\mathcal{C}^{\text{RSI}}(\mathcal{U}_k) = O(1)$,
+independent of $|\mathbf{D}|$ and $n$. Moreover, the updated posterior
+is properly normalized with no risk of variance explosion.
+\end{theorem}
+
+\begin{proof}
+\textbf{Step 1: Factorization.}
+The RSI prior factorizes as:
+\[
+  P(\mathbf{S}) = \prod_{i=1}^n P(s_i \mid \Theta_i)
+\]
+After update $\mathcal{U}_k$, the new prior is:
+\[
+  P'(\mathbf{S}) = P(s_k' \mid \Theta_k') \cdot \prod_{i \neq k} P(s_i \mid \Theta_i)
+\]
+
+\textbf{Step 2: Posterior correction.}
+By Bayes' theorem, the posterior before the update is:
+\[
+  P(\mathbf{S} \mid \mathbf{D}) = \frac{P(\mathbf{D} \mid \mathbf{S}) \cdot P(\mathbf{S})}{P(\mathbf{D})}
+\]
+After the update:
+\begin{align*}
+  P'(\mathbf{S} \mid \mathbf{D})
+  &= \frac{P(\mathbf{D} \mid \mathbf{S}) \cdot P'(\mathbf{S})}{P'(\mathbf{D})} \\
+  &= \frac{P(\mathbf{D} \mid \mathbf{S}) \cdot P(s_k' \mid \Theta_k')
+     \cdot \prod_{i \neq k} P(s_i \mid \Theta_i)}{P'(\mathbf{D})} \\
+  &\propto P(\mathbf{S} \mid \mathbf{D}) \cdot
+    \underbrace{\frac{P(s_k' \mid \Theta_k')}{P(s_k \mid \Theta_k)}}_{\rho_k(\Theta_k, \Theta_k')}
+\end{align*}
+
+\textbf{Step 3: Complexity.}
+The correction factor $\rho_k$ depends only on the parametric forms of
+$P(s_k \mid \Theta_k)$ and $P(s_k' \mid \Theta_k')$. Evaluating two
+parametric distributions (Bernoulli, Beta, Gaussian) requires a constant
+number of arithmetic operations, hence $O(1)$.
+
+\textbf{Step 4: Numerical stability.}
+The ratio $\rho_k$ is applied to the \emph{kernel} (unnormalized form)
+of the posterior, not to its absolute value. The normalization constant
+is updated as:
+\[
+  P'(\mathbf{D}) = P(\mathbf{D}) \cdot \int_{\mathcal{S}} \rho_k(\Theta_k, \Theta_k')
+  \, dP(\mathbf{S} \mid \mathbf{D})
+  = P(\mathbf{D}) \cdot \mathbb{E}_{P(\mathbf{S} \mid \mathbf{D})}[\rho_k]
+\]
+Under the conjugate families used in RSI (Beta-Binomial for $c_i$,
+Bernoulli for $a_i$, Gaussian-Gaussian for $\delta_i$), this expectation
+is available in closed form. The posterior therefore remains a properly
+normalized probability distribution after the update, with no variance
+explosion.
+\end{proof}
+
+\begin{corollary}[Cumulative cost over $T$ updates]
+\label{cor:cumulative}
+Over $T$ regulatory updates, total costs scale as:
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Method} & \textbf{Total cost} \\
+\midrule
+RSI & $O(T)$ \\
+Supervised ML (full retrain) & $O(T \cdot |\mathbf{D}| \cdot E)$ \\
+PSL / MLN & $O(T \cdot |\mathbf{D}| \cdot n)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+where $E$ denotes the number of training epochs. RSI dominates in
+environments with high regulatory change frequency.
+\end{corollary}
+
+\subsection{Proof of Theorem 2: Bernstein-von Mises Consistency}
+
+We first state and verify the regularity conditions, then give the
+complete proof.
+
+\textbf{Regularity conditions.}
+
+\begin{itemize}[leftmargin=2em]
+  \item[\textbf{C1}] \textit{Identifiability.}
+        $P(\mathbf{D} \mid \mathbf{S}) \neq P(\mathbf{D} \mid \mathbf{S}')$
+        for $\mathbf{S} \neq \mathbf{S}'$.
+        \textit{Verification:} Each component $(a_i, c_i, \delta_i)$
+        influences the likelihood through distinct mechanisms (activation
+        gating, Beta-distributed compliance, Gaussian drift). Distinct
+        states produce distinct likelihood functions.
+
+  \item[\textbf{C2}] \textit{Positive prior at truth.}
+        $P(\mathbf{S}^*) > 0$.
+        \textit{Verification:} The prior is a product of Bernoulli,
+        Beta, and Gaussian distributions, all of which have strictly
+        positive density on their respective supports. Hence
+        $P(\mathbf{S}) > 0$ for all $\mathbf{S} \in \mathcal{S}$.
+
+  \item[\textbf{C3}] \textit{Regularity of the likelihood.}
+        $\log P(\mathbf{D} \mid \mathbf{S})$ is twice differentiable
+        in the continuous components $(c_i, \delta_i)$.
+        \textit{Verification:} The likelihood functions (log-Gaussian,
+        exponential, Beta-Binomial) are smooth in their parameters.
+        Differentiability is inherited by the product.
+
+  \item[\textbf{C4}] \textit{Finite Fisher information.}
+        $\mathcal{I}(\mathbf{S}^*)$ is finite and positive definite.
+        \textit{Verification:} Under C1 and C3, and provided no rule
+        is degenerate (i.e., $c_i \notin \{0,1\}$ and $a_i \in (0,1)$),
+        the Fisher information matrix is positive definite.
+\end{itemize}
+
+\begin{theorem}[BvM Consistency --- complete]
+Under conditions C1--C4, as $m \to \infty$:
+\[
+  \sqrt{m}\bigl(\hat{\mathbf{S}}_m - \mathbf{S}^*\bigr)
+  \xrightarrow{d} \mathcal{N}\!\left(0,\, \mathcal{I}(\mathbf{S}^*)^{-1}\right)
+\]
+\end{theorem}
+
+\begin{proof}
+\textbf{Step 1: LLN convergence.}
+By the Law of Large Numbers, for i.i.d.\ observations:
+\[
+  \frac{1}{m} \log P(\mathbf{D}_m \mid \mathbf{S})
+  \xrightarrow{a.s.} \mathbb{E}_{\mathbf{S}^*}[\log P(d \mid \mathbf{S})]
+  = -\mathrm{KL}(P(\cdot \mid \mathbf{S}^*) \| P(\cdot \mid \mathbf{S}))
+  + \text{const}
+\]
+This is maximized at $\mathbf{S} = \mathbf{S}^*$ under C1.
+
+\textbf{Step 2: Local Gaussian approximation.}
+By a second-order Taylor expansion of $\log P(\mathbf{D}_m \mid \mathbf{S})$
+around $\mathbf{S}^*$:
+\[
+  \log P(\mathbf{D}_m \mid \mathbf{S}) \approx
+  \log P(\mathbf{D}_m \mid \mathbf{S}^*)
+  + \nabla \ell_m^\top (\mathbf{S} - \mathbf{S}^*)
+  - \frac{1}{2}(\mathbf{S} - \mathbf{S}^*)^\top
+  \bigl[-\nabla^2 \ell_m\bigr]
+  (\mathbf{S} - \mathbf{S}^*)
+\]
+where $\ell_m = \log P(\mathbf{D}_m \mid \mathbf{S})$.
+By the LLN, $-\frac{1}{m}\nabla^2 \ell_m \xrightarrow{a.s.}
+\mathcal{I}(\mathbf{S}^*)$ (C3, C4).
+
+\textbf{Step 3: Posterior Gaussianization.}
+Substituting into the posterior:
+\begin{align*}
+  P(\mathbf{S} \mid \mathbf{D}_m)
+  &\propto \exp\!\left(\log P(\mathbf{D}_m \mid \mathbf{S})\right) \cdot P(\mathbf{S}) \\
+  &\approx \exp\!\left(-\frac{m}{2}(\mathbf{S}-\mathbf{S}^*)^\top
+    \mathcal{I}(\mathbf{S}^*)
+    (\mathbf{S}-\mathbf{S}^*)\right) \cdot P(\mathbf{S})
+\end{align*}
+
+\textbf{Step 4: Prior dominance.}
+Under C2, $P(\mathbf{S}) > 0$ in a neighborhood of $\mathbf{S}^*$.
+As $m \to \infty$, the exponential term concentrates mass at $\mathbf{S}^*$
+at rate $m$, dominating the prior. The posterior converges to:
+\[
+  P(\mathbf{S} \mid \mathbf{D}_m)
+  \xrightarrow{d} \mathcal{N}\!\left(\mathbf{S}^*,\,
+  \frac{1}{m}\mathcal{I}(\mathbf{S}^*)^{-1}\right)
+\]
+The stated result follows by the change of variables
+$\sqrt{m}(\mathbf{S} - \mathbf{S}^*)$.
+\end{proof}
+
+\begin{corollary}[Prior robustness --- complete]
+Let $P_1(\mathbf{S})$ and $P_2(\mathbf{S})$ be two RSI priors satisfying C2.
+Then:
+\[
+  \mathrm{TV}\bigl(P_1(\mathbf{S} \mid \mathbf{D}_m),\,
+  P_2(\mathbf{S} \mid \mathbf{D}_m)\bigr) \to 0
+  \quad \text{as } m \to \infty
+\]
+\begin{proof}
+Both posteriors converge to $\mathcal{N}(\mathbf{S}^*,
+m^{-1}\mathcal{I}(\mathbf{S}^*)^{-1})$ by Theorem~2.
+Since total variation metrizes weak convergence on $\mathbb{R}^d$,
+$\mathrm{TV}(P_i(\mathbf{S}|\mathbf{D}_m), \mathcal{N}(\cdot)) \to 0$
+for $i = 1,2$, and the result follows by the triangle inequality.
+\end{proof}
+\end{corollary}
+
+\subsection{Proof of Theorem 3: Monotone ELBO Convergence}
+
+\begin{theorem}[Monotone ELBO --- complete]
+The RSI coordinate ascent updates produce a monotonically non-decreasing
+ELBO sequence: $\mathrm{ELBO}_{t+1} \geq \mathrm{ELBO}_t$ for all $t \geq 0$.
+\end{theorem}
+
+\begin{proof}
+Recall the ELBO decomposition:
+\[
+  \mathrm{ELBO}(\phi) = \mathbb{E}_{Q_\phi}[\log P(\mathbf{D} \mid \mathbf{S})]
+  - \mathrm{KL}[Q_\phi(\mathbf{S}) \| P(\mathbf{S})]
+  = \log P(\mathbf{D}) - \mathrm{KL}[Q_\phi(\mathbf{S}) \| P(\mathbf{S} \mid \mathbf{D})]
+\]
+Since $\log P(\mathbf{D})$ is constant with respect to $\phi$, maximizing
+the ELBO is equivalent to minimizing $\mathrm{KL}[Q_\phi \| P(\cdot|\mathbf{D})]$.
+
+At iteration $t$, the update for factor $i$ solves:
+\[
+  \phi_i^{(t+1)} = \arg\min_{\phi_i}
+  \mathrm{KL}\bigl[Q_{\phi_i}(s_i) \cdot \prod_{j \neq i} Q_{\phi_j^{(t)}}(s_j)
+  \;\|\; P(\mathbf{S} \mid \mathbf{D})\bigr]
+\]
+The optimal solution is:
+\[
+  Q_{\phi_i}^*(s_i) \propto \exp\!\left(
+  \mathbb{E}_{Q_{-i}}\bigl[\log P(\mathbf{D}, \mathbf{S})\bigr]
+  \right)
+\]
+This update can only decrease the KL divergence (or leave it unchanged),
+hence $\mathrm{ELBO}_{t+1} \geq \mathrm{ELBO}_t$.
+
+Since the ELBO is bounded above by $\log P(\mathbf{D}) < \infty$,
+the sequence converges. The limit is a stationary point of the ELBO.
+\end{proof}
+
+\begin{lemma}[ELBO gap bound]
+Let $Q_\phi^*$ denote the mean-field optimum. Then:
+\[
+  \mathrm{KL}[Q_\phi^*(\mathbf{S}) \| P(\mathbf{S} \mid \mathbf{D})]
+  \leq \sum_{i=1}^n \mathrm{KL}[Q_{\phi_i}^*(s_i) \| P(s_i \mid \mathbf{D})]
+\]
+\begin{proof}
+By the sub-additivity of KL divergence under the mean-field
+independence assumption:
+$Q_\phi(\mathbf{S}) = \prod_i Q_{\phi_i}(s_i)$.
+\end{proof}
+\end{lemma}
+
+%% ─────────────────────────────────────────────────────────────────
+\section{Reproducibility Details}
+\label{app:reproducibility}
+
+\subsection{Prior Hyperparameters}
+
+Table~\ref{tab:hyperparams} reports the prior hyperparameters
+$(\pi_i, \alpha_i, \beta_i, \sigma_i)$ used for each rule in the
+Togolese instantiation of RSI. These values encode institutional
+knowledge about historical compliance rates and rule stability.
+
+\begin{table}[H]
+\centering
+\caption{Prior hyperparameters by rule. $\pi_i$: activation probability.
+$(\alpha_i, \beta_i)$: Beta prior on compliance ($\mathbb{E}[c_i] = \alpha/(\alpha+\beta)$).
+$\sigma_i$: standard deviation of parametric drift prior.}
+\label{tab:hyperparams}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{llccccc}
+\toprule
+\textbf{Rule ID} & \textbf{Description} & $\pi_i$ & $\alpha_i$ & $\beta_i$
+  & $\mathbb{E}[c_i]$ & $\sigma_i$ \\
+\midrule
+R1\_TVA & VAT 18\%, threshold 60M / 100M FCFA & 0.92 & 8.0 & 2.0 & 0.80 & 0.05 \\
+R2\_IS  & CIT 29\%, threshold 100M FCFA        & 0.88 & 6.0 & 4.0 & 0.60 & 0.03 \\
+R3\_IMF & Minimum flat tax 1\%                  & 0.85 & 9.0 & 1.5 & 0.86 & 0.02 \\
+R4\_TPU & Informal sector flat tax              & 0.70 & 3.0 & 7.0 & 0.30 & 0.15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Rationale for prior choices.}
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{R1\_TVA}: High prior compliance ($\mathbb{E}[c_i]=0.80$)
+        reflects that formal VAT-registered enterprises in Togo generally
+        file returns, even if under-declared. Low drift ($\sigma=0.05$)
+        reflects the stability of the 18\% rate over the study period.
+  \item \textbf{R2\_IS}: Moderate compliance ($0.60$) reflects the
+        complexity of CIT computation and higher avoidance rates among
+        large enterprises.
+  \item \textbf{R3\_IMF}: High compliance ($0.86$) as IMF is simpler
+        to compute (1\% of turnover) and harder to avoid.
+  \item \textbf{R4\_TPU}: Low compliance ($0.30$) reflects the
+        well-documented informality of the micro-enterprise sector
+        in Sub-Saharan Africa. High drift ($\sigma=0.15$) reflects
+        high uncertainty about this segment.
+\end{itemize}
+
+\subsection{Variational Inference Parameters}
+
+\begin{table}[H]
+\centering
+\caption{Variational inference hyperparameters.}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Rationale} \\
+\midrule
+Learning rate $\eta$ & 1.5 & Amplifies posterior update beyond standard VI \\
+Max iterations & 150 & Empirical convergence $\leq$ 10 iterations \\
+Convergence tolerance $\varepsilon$ & $10^{-5}$ & ELBO change threshold \\
+Decision threshold $\tau$ & 0.551 & Optimized for F1 on validation set \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Baseline Configurations}
+
+\begin{table}[H]
+\centering
+\caption{Baseline model configurations.}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Parameter} & \textbf{Value} \\
+\midrule
+XGBoost & n\_estimators & 150 \\
+        & max\_depth & 4 \\
+        & learning\_rate & 0.1 \\
+        & subsample & 0.8 \\
+        & random\_state & 42 \\[4pt]
+MLP     & hidden\_layer\_sizes & (64, 32, 16) \\
+        & activation & ReLU \\
+        & max\_iter & 200 \\
+        & early\_stopping & True \\
+        & validation\_fraction & 0.1 \\
+        & random\_state & 42 \\[4pt]
+RBS     & VAT threshold (2022--2024) & 60M FCFA \\
+        & VAT threshold (2025) & 100M FCFA \\
+        & Payment delay alert threshold & 90 days \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Computational Environment}
+
+Experiments were run on a standard desktop machine (Windows 11,
+Intel Core processor, 16GB RAM). All code is implemented in Python 3.11
+using NumPy, SciPy, and scikit-learn. No GPU was used. Runtime for
+the full experiment pipeline is approximately 5--10 minutes.
+
+\subsection{Random Seeds}
+
+All experiments use \texttt{numpy.random.seed(42)} for reproducibility.
+Dataset generation uses \texttt{numpy.random.default\_rng(42)}.
+
+%% ─────────────────────────────────────────────────────────────────
+\begin{thebibliography}{9}
+
+\bibitem[Gabaix(2009)]{gabaix2009power}
+Gabaix, X. (2009).
+Power laws in economics and finance.
+\textit{Annual Review of Economics}, 1(1):255--294.
+
+\bibitem[Blei et al.(2017)]{blei2017variational}
+Blei, D. M., Kucukelbir, A., and McAuliffe, J. D. (2017).
+Variational inference: A review for statisticians.
+\textit{Journal of the American Statistical Association}, 112(518):859--877.
+
+\bibitem[van der Vaart(2000)]{van2000asymptotic}
+van der Vaart, A. W. (2000).
+\textit{Asymptotic Statistics}.
+Cambridge University Press.
+
+\end{thebibliography}
+
+\end{document}

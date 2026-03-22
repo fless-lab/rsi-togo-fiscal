@@ -1,0 +1,555 @@
+\documentclass[letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=green!60!black,urlcolor=blue]{hyperref}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{caption}
+
+\newtheorem{theoreme}{Th\'eor\`eme}
+\newtheorem{corollaire}{Corollaire}[theoreme]
+\newtheorem{lemme}{Lemme}
+\newtheorem{definition}{D\'efinition}
+
+\title{%
+\textbf{Inf\'erence d'\'Etat de R\`egles (RSI) ---}\\
+\textbf{Mat\'eriau Suppl\'ementaire}\\[0.4em]
+\large\textit{Annexes A, B, C}
+}
+\author{Abdou-Raouf Atarmla}
+\date{2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent Ce document contient le mat\'eriau suppl\'ementaire associ\'e
+au papier \emph{Inf\'erence d'\'Etat de R\`egles (RSI) : Un Cadre
+Bay\'esien pour la Surveillance de la Conformit\'e dans les Domaines
+R\'egis par des R\`egles}. Il comprend le dictionnaire du dataset
+(Annexe~A), les preuves compl\`etes des th\'eor\`emes (Annexe~B), et
+les d\'etails de reproductibilit\'e (Annexe~C).
+
+\tableofcontents
+\newpage
+
+%% ─────────────────────────────────────────────────────────────────
+\appendix
+
+\section{Dictionnaire du Dataset : RSI-Togo-Fiscal-Synthetic v1.0}
+\label{app:dataset}
+
+\subsection{Vue d'ensemble}
+
+Le dataset contient 2~000 entreprises synth\'etiques couvrant deux
+p\'eriodes r\'eglementaires (2022--2024 et 2025), g\'en\'er\'ees \`a
+partir des r\`egles fiscales r\'eelles de l'OTR. Chaque ligne est
+structur\'ee en quatre couches~:
+
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{Caract\'eristiques des entreprises}~: attributs
+        observables de l'entit\'e
+  \item \textbf{V\'erit\'e terrain latente} (\texttt{gt\_*})~: le
+        vrai \'etat de la r\`egle $(a_i, c_i, \delta_i)$, jamais
+        accessible \`a RSI durant l'inf\'erence
+  \item \textbf{Observations bruit\'ees} (\texttt{obs\_*})~: ce
+        qu'un syst\`eme fiscal observe r\'eellement
+  \item \textbf{\'Etiquettes binaires} (\texttt{label\_*})~: labels
+        de conformit\'e d\'eriv\'es pour l'\'evaluation des baselines
+\end{enumerate}
+
+\subsection{R\'ef\'erence des colonnes}
+
+\begin{longtable}{lp{2.2cm}p{7.5cm}}
+\toprule
+\textbf{Colonne} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Colonne} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\small Suite page suivante} \\
+\endfoot
+\bottomrule
+\endlastfoot
+
+\multicolumn{3}{l}{\textit{Identifiants}} \\[2pt]
+\texttt{enterprise\_id} & cha\^ine & Identifiant unique de l'entreprise (ex. ENT\_00001) \\
+\texttt{period} & cha\^ine & P\'eriode r\'eglementaire~: \texttt{2022\_2024} ou \texttt{2025} \\[6pt]
+
+\multicolumn{3}{l}{\textit{Caract\'eristiques des entreprises}} \\[2pt]
+\texttt{sector} & cha\^ine & Secteur \'economique (commerce, services, BTP, industrie, agriculture, restauration, transport) \\
+\texttt{region} & cha\^ine & R\'egion g\'eographique au Togo (Lom\'e, Sokod\'e, Kara, etc.) \\
+\texttt{ca\_segment} & cha\^ine & Segment de CA~: \texttt{informal} ($<$30M), \texttt{rsi} (30--100M), \texttt{reel} ($\geq$100M) \\
+\texttt{n\_employes} & int & Nombre r\'eel d'employ\'es (distribution log-normale) \\[6pt]
+
+\multicolumn{3}{l}{\textit{V\'erit\'e terrain latente (gt\_*) --- inaccessible \`a RSI durant l'inf\'erence}} \\[2pt]
+\texttt{gt\_ca\_reel} & flottant & Chiffre d'affaires annuel r\'eel en FCFA \\
+\texttt{gt\_benefice\_reel} & flottant & B\'en\'efice annuel r\'eel en FCFA \\
+\texttt{gt\_tva\_active} & int & 1 si la r\`egle TVA s'applique (CA $\geq$ seuil), 0 sinon \\
+\texttt{gt\_tva\_compliance} & flottant & Taux de conformit\'e TVA r\'eel $c_i \in [0,1]$, tir\'e d'un prior Beta \\
+\texttt{gt\_tva\_due} & flottant & TVA th\'eorique due (FCFA) \\
+\texttt{gt\_is\_active} & int & 1 si la r\`egle IS s'applique (CA $\geq$ 100M FCFA) \\
+\texttt{gt\_is\_compliance} & flottant & Taux de conformit\'e IS r\'eel $c_i \in [0,1]$ \\
+\texttt{gt\_is\_due} & flottant & IS effectif d\^u (max de l'IS et de l'IMF) en FCFA \\
+\texttt{gt\_tpu\_active} & int & 1 si la r\`egle TPU s'applique (CA $<$ 30M FCFA) \\
+\texttt{gt\_tpu\_compliance} & flottant & Taux de conformit\'e TPU r\'eel $c_i \in [0,1]$ \\
+\texttt{gt\_irpp\_susp\_active} & int & 1 si la suspension IRPP s'applique (salaire $<$ 900k, p\'eriode 2023) \\[6pt]
+
+\multicolumn{3}{l}{\textit{Observations bruit\'ees (obs\_*) --- entr\'ee de RSI}} \\[2pt]
+\texttt{obs\_ca\_declare} & flottant & CA d\'eclar\'e. G\'en\'er\'e comme $\hat{x} = x \cdot \beta \cdot \varepsilon$ o\`u $\beta \sim \text{Beta}(7,3)$ capture la sous-d\'eclaration syst\'ematique et $\varepsilon \sim \mathcal{N}(1, 0{,}045)$ le bruit de mesure. Ratio moyen $\mathbb{E}[\hat{x}/x] \approx 0{,}70$. \\
+\texttt{obs\_tva\_declaree} & flottant & Montant de TVA d\'eclar\'e. Z\'ero si l'entit\'e ne d\'eclare pas~; distribu\'e log-normalement autour de la TVA th\'eorique sinon. \texttt{NaN} avec probabilit\'e 0,18 (donn\'ee manquante). \\
+\texttt{obs\_tva\_assujetti\_declare} & bool & Si l'entit\'e s'est auto-d\'eclar\'ee assujettie \`a la TVA \\
+\texttt{obs\_is\_declare} & flottant & IS d\'eclar\'e. \texttt{NaN} avec probabilit\'e 0,18. \\
+\texttt{obs\_benefice\_declare} & flottant & B\'en\'efice d\'eclar\'e. Typiquement 70\% du b\'en\'efice r\'eel avec bruit. \texttt{NaN} avec probabilit\'e 0,18. \\
+\texttt{obs\_retard\_paiement\_jours} & int & D\'elai de paiement en jours. G\'en\'er\'e depuis $\text{Exponentielle}(\lambda)$ o\`u $\lambda = 5 / (c_{\text{r\'egime}} + 0{,}1)$, avec $c_{\text{r\'egime}}$ la conformit\'e du r\'egime applicable. Non-conformit\'e \'elev\'ee $\Rightarrow$ d\'elais plus longs. \\
+\texttt{obs\_has\_compte\_bancaire} & bool & Si l'entit\'e poss\`ede un compte bancaire formel. $P(\text{compte}) = 0{,}75 \cdot c + 0{,}20 \cdot (1-c)$ o\`u $c$ est la conformit\'e du r\'egime. \\
+\texttt{obs\_utilise\_facturation\_electronique} & bool & Si l'entit\'e utilise la facturation \'electronique \\
+\texttt{obs\_a\_ete\_audite} & bool & Si l'entit\'e a \'et\'e audit\'ee sur la p\'eriode (taux de base 8\%) \\
+\texttt{obs\_n\_employes\_declare} & int & Nombre d'employ\'es d\'eclar\'e ($\approx$~85\% de la vraie valeur) \\
+\texttt{obs\_ratio\_sous\_declaration} & flottant & Ratio CA d\'eclar\'e / CA r\'eel ($\hat{x}/x$) \\
+\texttt{obs\_tva\_missing} & bool & Vrai si \texttt{obs\_tva\_declaree} est manquant \\
+\texttt{obs\_is\_missing} & bool & Vrai si \texttt{obs\_is\_declare} est manquant \\
+\texttt{obs\_benefice\_missing} & bool & Vrai si \texttt{obs\_benefice\_declare} est manquant \\[6pt]
+
+\multicolumn{3}{l}{\textit{\'Etiquettes binaires (label\_*) --- utilis\'ees uniquement pour l'\'evaluation des baselines}} \\[2pt]
+\texttt{label\_tva\_non\_conforme} & int & 1 si TVA active et $c_{\text{TVA}} < 0{,}5$ \\
+\texttt{label\_is\_non\_conforme} & int & 1 si IS actif et $c_{\text{IS}} < 0{,}5$ \\
+\texttt{label\_any\_non\_conforme} & int & 1 si au moins l'un de~: TVA non conforme, IS non conforme, ou conformit\'e TPU $< 0{,}3$ \\
+
+\end{longtable}
+
+\subsection{Mod\`ele de sous-d\'eclaration}
+
+Le ratio de sous-d\'eclaration est le m\'ecanisme de bruit principal,
+refl\'etant le comportement fiscal r\'eel en Afrique francophone.
+Pour chaque entreprise~:
+
+\[
+  \hat{x} = x \cdot \underbrace{\beta}_{\text{syst\'ematique}} \cdot
+  \underbrace{\varepsilon}_{\text{bruit}}, \quad
+  \beta \sim \text{Beta}(7, 3), \quad
+  \varepsilon \sim \mathcal{N}(1,\, 0{,}045^2)
+\]
+
+La distribution Beta(7,3) a une moyenne $7/10 = 0{,}70$ et concentre
+sa masse entre 0,55 et 0,85, conform\'ement aux estimations empiriques
+des \'etudes fiscales en Afrique subsaharienne. Le terme de bruit
+gaussien capture les approximations comptables et les arrondis.
+
+\subsection{\'Ev\'enement de changement r\'eglementaire}
+
+La p\'eriode \texttt{2025} encode le rel\`evement du seuil TVA de
+60M \`a 100M FCFA par la Loi n°2024-007 (30 d\'ecembre 2024).
+Les entreprises avec un CA r\'eel dans $[60\text{M}, 100\text{M})$
+FCFA passent de \texttt{gt\_tva\_active=1} (p\'eriode 2022--2024)
+\`a \texttt{gt\_tva\_active=0} (p\'eriode 2025), fournissant une
+exp\'erience naturelle propre pour valider le Th\'eor\`eme~1
+(adaptabilit\'e $O(1)$).
+
+\subsection{Structure en loi de puissance}
+
+Le CA est tir\'e d'une distribution log-normale par segment, dont
+l'agr\'egat approxime une loi de puissance---la signature universelle
+des distributions de taille des firmes dans les \'economies de
+march\'e~\cite{gabaix2009power}. La structure en trois segments
+reproduit la concentration typique des march\'es africains~:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Segment} & \textbf{Plage de CA} & \textbf{Part} \\
+\midrule
+Informel (TPU) & $<$ 30M FCFA & 60\% \\
+Interm\'ediaire (RSI) & 30M -- 100M FCFA & 25\% \\
+Grand contribuable (IS/TVA) & $\geq$ 100M FCFA & 15\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%% ─────────────────────────────────────────────────────────────────
+\section{Preuves Compl\`etes des Th\'eor\`emes}
+\label{app:preuves}
+
+\subsection{Preuve du Th\'eor\`eme 1 : Adaptabilit\'e $O(1)$}
+
+\begin{theoreme}[Adaptabilit\'e $O(1)$ --- complet]
+Pour toute mise \`a jour r\'eglementaire $\mathcal{U}_k : \Theta_k
+\to \Theta_k'$, le co\^ut de mise \`a jour RSI est
+$\mathcal{C}^{\text{RSI}}(\mathcal{U}_k) = O(1)$, ind\'ependamment
+de $|\mathbf{D}|$ et de $n$. De plus, le posterior mis \`a jour est
+correctement normalis\'e, sans risque d'explosion de variance.
+\end{theoreme}
+
+\begin{proof}
+\textbf{\'Etape 1 : Factorisation.}
+L'a priori RSI se factorise comme~:
+\[
+  P(\mathbf{S}) = \prod_{i=1}^n P(s_i \mid \Theta_i)
+\]
+Apr\`es la mise \`a jour $\mathcal{U}_k$, le nouvel a priori est~:
+\[
+  P'(\mathbf{S}) = P(s_k' \mid \Theta_k') \cdot \prod_{i \neq k} P(s_i \mid \Theta_i)
+\]
+
+\textbf{\'Etape 2 : Correction du posterior.}
+Par le th\'eor\`eme de Bayes, le posterior avant mise \`a jour est~:
+\[
+  P(\mathbf{S} \mid \mathbf{D}) = \frac{P(\mathbf{D} \mid \mathbf{S})
+  \cdot P(\mathbf{S})}{P(\mathbf{D})}
+\]
+Apr\`es la mise \`a jour~:
+\begin{align*}
+  P'(\mathbf{S} \mid \mathbf{D})
+  &= \frac{P(\mathbf{D} \mid \mathbf{S}) \cdot P'(\mathbf{S})}{P'(\mathbf{D})} \\
+  &\propto P(\mathbf{S} \mid \mathbf{D}) \cdot
+    \underbrace{\frac{P(s_k' \mid \Theta_k')}{P(s_k \mid \Theta_k)}}_{\rho_k(\Theta_k, \Theta_k')}
+\end{align*}
+
+\textbf{\'Etape 3 : Complexit\'e.}
+Le facteur de correction $\rho_k$ ne d\'epend que des formes
+param\'etriques de $P(s_k \mid \Theta_k)$ et $P(s_k' \mid \Theta_k')$.
+L'\'evaluation de deux distributions param\'etriques (Bernoulli,
+Beta, Gaussienne) requiert un nombre constant d'op\'erations
+arithm\'etiques, d'o\`u $O(1)$.
+
+\textbf{\'Etape 4 : Stabilit\'e num\'erique.}
+Le ratio $\rho_k$ est appliqu\'e au \emph{noyau} (forme non
+normalis\'ee) du posterior, et non \`a sa valeur absolue.
+La constante de normalisation est mise \`a jour comme~:
+\[
+  P'(\mathbf{D}) = P(\mathbf{D}) \cdot
+  \mathbb{E}_{P(\mathbf{S} \mid \mathbf{D})}[\rho_k]
+\]
+Sous les familles conjugu\'ees utilis\'ees dans RSI (Beta-Binomiale
+pour $c_i$, Bernoulli pour $a_i$, Gaussienne pour $\delta_i$), cette
+esp\'erance est disponible en forme ferm\'ee. Le posterior reste donc
+une distribution de probabilit\'e proprement normalis\'ee apr\`es la
+mise \`a jour, sans explosion de variance.
+\end{proof}
+
+\begin{corollaire}[Co\^ut cumulatif sur $T$ mises \`a jour]
+Sur $T$ mises \`a jour r\'eglementaires, les co\^uts totaux scalent
+comme~:
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{M\'ethode} & \textbf{Co\^ut total} \\
+\midrule
+RSI & $O(T)$ \\
+ML supervis\'e (r\'e-entra\^inement complet) & $O(T \cdot |\mathbf{D}| \cdot E)$ \\
+PSL / MLN & $O(T \cdot |\mathbf{D}| \cdot n)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+o\`u $E$ d\'enote le nombre d'\'epoques d'entra\^inement. RSI domine
+dans les environnements \`a forte fr\'equence r\'eglementaire.
+\end{corollaire}
+
+\subsection{Preuve du Th\'eor\`eme 2 : Consistance de Bernstein-von Mises}
+
+\textbf{V\'erification des conditions de r\'egularit\'e.}
+
+\begin{itemize}[leftmargin=2em]
+  \item[\textbf{C1}] \textit{Identifiabilit\'e.}
+        $P(\mathbf{D} \mid \mathbf{S}) \neq P(\mathbf{D} \mid \mathbf{S}')$
+        pour $\mathbf{S} \neq \mathbf{S}'$.
+        \textit{V\'erification~:} Chaque composante $(a_i, c_i, \delta_i)$
+        influence la vraisemblance via des m\'ecanismes distincts.
+        Des \'etats distincts produisent des fonctions de vraisemblance
+        distinctes.
+
+  \item[\textbf{C2}] \textit{A priori positif en la v\'erit\'e.}
+        $P(\mathbf{S}^*) > 0$.
+        \textit{V\'erification~:} L'a priori est un produit de Bernoulli,
+        Beta et Gaussiennes, toutes \`a densit\'e strictement positive sur
+        leurs supports. Donc $P(\mathbf{S}) > 0$ pour tout $\mathbf{S}
+        \in \mathcal{S}$.
+
+  \item[\textbf{C3}] \textit{R\'egularit\'e de la vraisemblance.}
+        $\log P(\mathbf{D} \mid \mathbf{S})$ est deux fois
+        diff\'erentiable dans les composantes continues $(c_i, \delta_i)$.
+        \textit{V\'erification~:} Les fonctions de vraisemblance
+        (log-gaussienne, exponentielle, Beta-Binomiale) sont lisses en
+        leurs param\`etres. La diff\'erentiabilit\'e est h\'erit\'ee
+        par le produit.
+
+  \item[\textbf{C4}] \textit{Information de Fisher finie.}
+        $\mathcal{I}(\mathbf{S}^*)$ est finie et d\'efinie positive.
+        \textit{V\'erification~:} Sous C1 et C3, et sous r\'eserve
+        qu'aucune r\`egle ne soit d\'eg\'en\'er\'ee (i.e., $c_i \notin
+        \{0,1\}$ et $a_i \in (0,1)$), la matrice d'information de Fisher
+        est d\'efinie positive.
+\end{itemize}
+
+\begin{theoreme}[Consistance BvM --- complet]
+Sous les conditions C1--C4, quand $m \to \infty$~:
+\[
+  \sqrt{m}\bigl(\hat{\mathbf{S}}_m - \mathbf{S}^*\bigr)
+  \xrightarrow{d} \mathcal{N}\!\left(0,\, \mathcal{I}(\mathbf{S}^*)^{-1}\right)
+\]
+\end{theoreme}
+
+\begin{proof}
+\textbf{\'Etape 1 : Convergence par la LGN.}
+Par la loi des grands nombres, pour des observations i.i.d.~:
+\[
+  \frac{1}{m} \log P(\mathbf{D}_m \mid \mathbf{S})
+  \xrightarrow{p.s.} \mathbb{E}_{\mathbf{S}^*}[\log P(d \mid \mathbf{S})]
+  = -\mathrm{KL}(P(\cdot \mid \mathbf{S}^*) \| P(\cdot \mid \mathbf{S}))
+  + \text{cst}
+\]
+Ceci est maximis\'e en $\mathbf{S} = \mathbf{S}^*$ sous C1.
+
+\textbf{\'Etape 2 : Approximation gaussienne locale.}
+Par un d\'eveloppement de Taylor au second ordre de $\log P(\mathbf{D}_m
+\mid \mathbf{S})$ autour de $\mathbf{S}^*$~:
+\[
+  \log P(\mathbf{D}_m \mid \mathbf{S}) \approx
+  \log P(\mathbf{D}_m \mid \mathbf{S}^*)
+  + \nabla \ell_m^\top (\mathbf{S} - \mathbf{S}^*)
+  - \frac{1}{2}(\mathbf{S} - \mathbf{S}^*)^\top
+  \bigl[-\nabla^2 \ell_m\bigr]
+  (\mathbf{S} - \mathbf{S}^*)
+\]
+Par la LGN, $-\frac{1}{m}\nabla^2 \ell_m \xrightarrow{p.s.}
+\mathcal{I}(\mathbf{S}^*)$ (C3, C4).
+
+\textbf{\'Etape 3 : Gaussianisation du posterior.}
+En substituant dans le posterior~:
+\begin{align*}
+  P(\mathbf{S} \mid \mathbf{D}_m)
+  &\propto \exp\!\left(\log P(\mathbf{D}_m \mid \mathbf{S})\right)
+  \cdot P(\mathbf{S}) \\
+  &\approx \exp\!\left(-\frac{m}{2}(\mathbf{S}-\mathbf{S}^*)^\top
+    \mathcal{I}(\mathbf{S}^*)
+    (\mathbf{S}-\mathbf{S}^*)\right) \cdot P(\mathbf{S})
+\end{align*}
+
+\textbf{\'Etape 4 : Domination de l'a priori.}
+Sous C2, $P(\mathbf{S}) > 0$ dans un voisinage de $\mathbf{S}^*$.
+Quand $m \to \infty$, le terme exponentiel concentre la masse en
+$\mathbf{S}^*$ \`a vitesse $m$, dominant l'a priori. Le posterior
+converge vers~:
+\[
+  P(\mathbf{S} \mid \mathbf{D}_m)
+  \xrightarrow{d} \mathcal{N}\!\left(\mathbf{S}^*,\,
+  \frac{1}{m}\mathcal{I}(\mathbf{S}^*)^{-1}\right)
+\]
+Le r\'esultat suit par le changement de variable
+$\sqrt{m}(\mathbf{S} - \mathbf{S}^*)$.
+\end{proof}
+
+\begin{corollaire}[Robustesse \`a l'a priori --- complet]
+Soient $P_1(\mathbf{S})$ et $P_2(\mathbf{S})$ deux a priori RSI
+satisfaisant C2. Alors~:
+\[
+  \mathrm{TV}\bigl(P_1(\mathbf{S} \mid \mathbf{D}_m),\,
+  P_2(\mathbf{S} \mid \mathbf{D}_m)\bigr) \to 0
+  \quad (m \to \infty)
+\]
+\begin{proof}
+Les deux posteriors convergent vers
+$\mathcal{N}(\mathbf{S}^*, m^{-1}\mathcal{I}(\mathbf{S}^*)^{-1})$
+par le Th\'eor\`eme~2. Puisque la variation totale m\'etrise la
+convergence faible sur $\mathbb{R}^d$, $\mathrm{TV}(P_i(\mathbf{S}
+|\mathbf{D}_m), \mathcal{N}(\cdot)) \to 0$ pour $i = 1,2$, et le
+r\'esultat suit par l'in\'egalit\'e triangulaire.
+\end{proof}
+\end{corollaire}
+
+\subsection{Preuve du Th\'eor\`eme 3 : Convergence Monotone de l'ELBO}
+
+\begin{theoreme}[ELBO Monotone --- complet]
+Les mises \`a jour par ascension de coordonn\'ees RSI produisent une
+s\'equence ELBO monotone non d\'ecroissante~:
+$\mathrm{ELBO}_{t+1} \geq \mathrm{ELBO}_t$ pour tout $t \geq 0$.
+\end{theoreme}
+
+\begin{proof}
+Rappelons la d\'ecomposition de l'ELBO~:
+\[
+  \mathrm{ELBO}(\phi) = \mathbb{E}_{Q_\phi}[\log P(\mathbf{D} \mid \mathbf{S})]
+  - \mathrm{KL}[Q_\phi(\mathbf{S}) \| P(\mathbf{S})]
+  = \log P(\mathbf{D}) - \mathrm{KL}[Q_\phi(\mathbf{S}) \| P(\mathbf{S} \mid \mathbf{D})]
+\]
+Puisque $\log P(\mathbf{D})$ est constant par rapport \`a $\phi$,
+maximiser l'ELBO est \'equivalent \`a minimiser
+$\mathrm{KL}[Q_\phi \| P(\cdot|\mathbf{D})]$.
+
+\`A l'it\'eration $t$, la mise \`a jour pour le facteur $i$ r\'esout~:
+\[
+  \phi_i^{(t+1)} = \arg\min_{\phi_i}
+  \mathrm{KL}\bigl[Q_{\phi_i}(s_i) \cdot \prod_{j \neq i}
+  Q_{\phi_j^{(t)}}(s_j) \;\|\; P(\mathbf{S} \mid \mathbf{D})\bigr]
+\]
+La solution optimale est~:
+\[
+  Q_{\phi_i}^*(s_i) \propto \exp\!\left(
+  \mathbb{E}_{Q_{-i}}\bigl[\log P(\mathbf{D}, \mathbf{S})\bigr]
+  \right)
+\]
+Cette mise \`a jour ne peut que diminuer la divergence KL (ou la
+laisser inchang\'ee), d'o\`u $\mathrm{ELBO}_{t+1} \geq \mathrm{ELBO}_t$.
+
+Puisque l'ELBO est born\'e sup\'erieurement par $\log P(\mathbf{D})
+< \infty$, la s\'equence converge. La limite est un point stationnaire
+de l'ELBO.
+\end{proof}
+
+\begin{lemme}[Borne sur le gap variationnel]
+Soit $Q_\phi^*$ l'optimum champ-moyen. Alors~:
+\[
+  \mathrm{KL}[Q_\phi^*(\mathbf{S}) \| P(\mathbf{S} \mid \mathbf{D})]
+  \leq \sum_{i=1}^n \mathrm{KL}[Q_{\phi_i}^*(s_i) \| P(s_i \mid \mathbf{D})]
+\]
+\begin{proof}
+Par la sous-additivit\'e de la divergence KL sous l'hypoth\`ese
+d'ind\'ependance champ-moyen~:
+$Q_\phi(\mathbf{S}) = \prod_i Q_{\phi_i}(s_i)$.
+\end{proof}
+\end{lemme}
+
+%% ─────────────────────────────────────────────────────────────────
+\section{D\'etails de Reproductibilit\'e}
+\label{app:reproductibilite}
+
+\subsection{Hyperparams de l'a priori}
+
+Le Tableau~\ref{tab:hyperparams} reportent les hyperparams de l'a
+priori $(\pi_i, \alpha_i, \beta_i, \sigma_i)$ utilis\'es pour chaque
+r\`egle dans l'instanciation togolaise de RSI. Ces valeurs encodent
+la connaissance institutionnelle sur les taux de conformit\'e
+historiques et la stabilit\'e des r\`egles.
+
+\begin{table}[H]
+\centering
+\caption{Hyperparams de l'a priori par r\`egle. $\pi_i$~: probabilit\'e
+d'activation. $(\alpha_i, \beta_i)$~: a priori Beta sur la conformit\'e
+($\mathbb{E}[c_i] = \alpha/(\alpha+\beta)$). $\sigma_i$~: \'ecart-type
+du prior de d\'erive param\'etrique.}
+\label{tab:hyperparams}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{llccccc}
+\toprule
+\textbf{R\`egle} & \textbf{Description} & $\pi_i$ & $\alpha_i$ & $\beta_i$
+  & $\mathbb{E}[c_i]$ & $\sigma_i$ \\
+\midrule
+R1\_TVA & TVA 18\%, seuil 60M / 100M FCFA & 0,92 & 8,0 & 2,0 & 0,80 & 0,05 \\
+R2\_IS  & IS 29\%, seuil 100M FCFA         & 0,88 & 6,0 & 4,0 & 0,60 & 0,03 \\
+R3\_IMF & IMF 1\% du CA                     & 0,85 & 9,0 & 1,5 & 0,86 & 0,02 \\
+R4\_TPU & Forfait secteur informel          & 0,70 & 3,0 & 7,0 & 0,30 & 0,15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Justification des choix de l'a priori.}
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{R1\_TVA}~: Conformit\'e a priori \'elev\'ee
+        ($\mathbb{E}[c_i]=0{,}80$) car les entreprises assujettis \`a la
+        TVA au Togo d\'eposent g\'en\'eralement leurs d\'eclarations,
+        m\^eme si le montant est sous-estim\'e. Faible d\'erive
+        ($\sigma=0{,}05$) car le taux de 18\% est stable sur la p\'eriode.
+  \item \textbf{R2\_IS}~: Conformit\'e mod\'er\'ee ($0{,}60$) refl\'etant
+        la complexit\'e du calcul IS et les taux d'\'evasion plus \'elev\'es
+        parmi les grandes entreprises.
+  \item \textbf{R3\_IMF}~: Conformit\'e \'elev\'ee ($0{,}86$) car l'IMF
+        est plus simple \`a calculer (1\% du CA) et plus difficile \`a
+        \'eviter.
+  \item \textbf{R4\_TPU}~: Faible conformit\'e ($0{,}30$) refl\'etant
+        l'informalit\'e bien document\'ee du secteur des micro-entreprises
+        en Afrique subsaharienne. D\'erive \'elev\'ee ($\sigma=0{,}15$)
+        refl\'etant la forte incertitude sur ce segment.
+\end{itemize}
+
+\subsection{Param\`etres de l'inf\'erence variationnelle}
+
+\begin{table}[H]
+\centering
+\caption{Hyperparams de l'inf\'erence variationnelle.}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Param\`etre} & \textbf{Valeur} & \textbf{Justification} \\
+\midrule
+Taux d'apprentissage $\eta$ & 1,5 & Amplifie la mise \`a jour post\'erieure \\
+It\'erations max & 150 & Convergence empirique $\leq$ 10 it\'erations \\
+Tol\'erance de convergence $\varepsilon$ & $10^{-5}$ & Seuil de variation ELBO \\
+Seuil de d\'ecision $\tau$ & 0,551 & Optimis\'e pour le F1 sur l'ensemble de validation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Configurations des baselines}
+
+\begin{table}[H]
+\centering
+\caption{Configurations des mod\`eles baseline.}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lll}
+\toprule
+\textbf{Mod\`ele} & \textbf{Param\`etre} & \textbf{Valeur} \\
+\midrule
+XGBoost & n\_estimators & 150 \\
+        & max\_depth & 4 \\
+        & learning\_rate & 0,1 \\
+        & subsample & 0,8 \\
+        & random\_state & 42 \\[4pt]
+MLP     & hidden\_layer\_sizes & (64, 32, 16) \\
+        & activation & ReLU \\
+        & max\_iter & 200 \\
+        & early\_stopping & Vrai \\
+        & validation\_fraction & 0,1 \\
+        & random\_state & 42 \\[4pt]
+SBR     & Seuil TVA (2022--2024) & 60M FCFA \\
+        & Seuil TVA (2025) & 100M FCFA \\
+        & Seuil d'alerte retard & 90 jours \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Environnement de calcul}
+
+Les exp\'eriences ont \'et\'e ex\'ecut\'ees sur un ordinateur de
+bureau standard (Windows 11, processeur Intel Core, 16 Go de RAM).
+Tout le code est impl\'ement\'e en Python 3.11 en utilisant NumPy,
+SciPy et scikit-learn. Aucun GPU n'a \'et\'e utilis\'e. La dur\'ee
+du pipeline exp\'erimental complet est d'environ 5 \`a 10 minutes.
+
+\subsection{Graines al\'eatoires}
+
+Toutes les exp\'eriences utilisent \texttt{numpy.random.seed(42)}
+pour la reproductibilit\'e. La g\'en\'eration du dataset utilise
+\texttt{numpy.random.default\_rng(42)}.
+
+%% ─────────────────────────────────────────────────────────────────
+\begin{thebibliography}{9}
+
+\bibitem[Gabaix(2009)]{gabaix2009power}
+Gabaix, X. (2009).
+Power laws in economics and finance.
+\textit{Annual Review of Economics}, 1(1):255--294.
+
+\bibitem[Blei et al.(2017)]{blei2017variational}
+Blei, D. M., Kucukelbir, A., et McAuliffe, J. D. (2017).
+Variational inference: A review for statisticians.
+\textit{Journal of the American Statistical Association}, 112(518):859--877.
+
+\bibitem[van der Vaart(2000)]{van2000asymptotic}
+van der Vaart, A. W. (2000).
+\textit{Asymptotic Statistics}.
+Cambridge University Press.
+
+\end{thebibliography}
+
+\end{document}
