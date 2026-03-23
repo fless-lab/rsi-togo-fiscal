@@ -74,8 +74,8 @@ We instantiate RSI on the Togolese fiscal system and introduce
 synthetic enterprises grounded in real OTR regulatory rules
 (2022--2025). Without any labeled training data, RSI achieves
 F1~$=$~0.519 and AUC~$=$~0.599, while absorbing regulatory changes
-in 0.2\,ms versus 407\,ms for full model retraining---a $2{,}000\times$
-speedup.
+in under 1\,ms versus 683--1082\,ms for full model retraining---at
+least a $600\times$ speedup.
 
 \medskip
 \noindent\textbf{Keywords:} Bayesian inference, rule-governed domains,
@@ -140,7 +140,7 @@ that formalizes the inverse paradigm. Our contributions are:
         benchmark grounded in Togolese fiscal law, with a documented
         regulatory change event (Section~\ref{sec:experiments}).
   \item \textbf{Empirical validation} across five experiments
-        demonstrating zero-shot performance, a $2{,}000\times$ update
+        demonstrating zero-shot performance, a $600\times$ update
         speedup, and robustness under 50\% missing data
         (Section~\ref{sec:experiments}).
 \end{enumerate}
@@ -493,9 +493,9 @@ XGBoost and MLP are trained under full supervision.
   & \textbf{Labels?} & \textbf{Update cost} \\
 \midrule
 \textbf{RSI (ours)} & \textbf{0.519} & \textbf{0.599} & \textbf{0.909}
-  & \textbf{No} & 0.2\,ms \\
+  & \textbf{No} & $<$1\,ms \\
 RBS & 0.182 & --- & 0.214 & No & $\sim$0\,ms \\
-XGBoost$^\dagger$ & 0.967 & 0.999 & 0.978 & Yes & 407\,ms \\
+XGBoost$^\dagger$ & 0.967 & 0.999 & 0.978 & Yes & 683--1082\,ms \\
 MLP$^\dagger$ & 0.087 & 0.747 & 0.153 & Yes & 61\,ms \\
 \bottomrule
 \end{tabular}
@@ -524,25 +524,30 @@ but cannot operate in the zero-label setting.
 \textbf{Model} & \textbf{Update time} & \textbf{Post-update F1}
   & \textbf{Retrain needed?} \\
 \midrule
-RSI (ours) & \textbf{0.2\,ms} & 0.411 & No \\
-XGBoost & 407\,ms & 0.954 & Yes \\
+RSI (ours) & \textbf{$<$1\,ms} & 0.411 & No \\
+XGBoost & 683--1082\,ms & 0.954 & Yes \\
 MLP & 61\,ms & 0.000 & Yes \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent\textbf{Note on Update Efficiency.} The $2{,}000\times$ speedup specifically measures the computational cost of \textbf{absorbing a regulatory update} (i.e., re-calculating the posterior for a new rule parameter) compared to a full model retraining on the entire dataset $\mathbf{D}$. While single-instance inference latency remains competitive across all models, the $O(1)$ property of RSI provides a critical advantage for institutional systems where regulations change annually or across thousands of taxpayer categories.
+\noindent\textbf{Note on Update Efficiency.} The speedup specifically measures the computational cost of \textbf{absorbing a regulatory update} (i.e., re-calculating the posterior for a new rule parameter) compared to a full model retraining on the entire dataset $\mathbf{D}$. While single-instance inference latency remains competitive across all models, the $O(1)$ property of RSI provides a critical advantage for institutional systems where regulations change annually or across thousands of taxpayer categories.
 
-RSI updates in 0.2\,ms---a $\mathbf{2{,}000\times}$ speedup over
-XGBoost. Over $T$ annual updates (Togo: $T \approx 4$--$6$),
+RSI absorbs regulatory updates in under 1\,ms---at least $\mathbf{600\times}$ faster than
+XGBoost full retraining (683--1082\,ms across runs on the test machine).
+Absolute timings are hardware-dependent; the $O(1)$ complexity guarantee
+is machine-independent and holds regardless of dataset size or platform.
+Over $T$ annual updates (Togo: $T \approx 4$--$6$),
 cumulative savings grow linearly with $T$ and exponentially with
 dataset size, confirming Corollary~1.
 
 \paragraph{EXP-3: BvM Consistency (Theorem~\ref{thm:bvm}).}
-RSI posterior uncertainty $\sigma[c_i | \mathbf{D}]$ decreases
-monotonically with sample size $N$, consistent with
-Theorem~\ref{thm:bvm}. For $N < 25$, RSI achieves competitive recall
-while XGBoost cannot operate (insufficient labeled examples).
+RSI posterior uncertainty $\sigma[c_i | \mathbf{D}]$ exhibits a
+general decreasing trend with sample size $N$, consistent with the
+asymptotic guarantees of Theorem~\ref{thm:bvm}. Minor oscillations
+at finite $N$ are expected under mean-field VI with small samples.
+For $N < 25$, RSI achieves competitive recall while XGBoost cannot
+operate (insufficient labeled examples).
 
 \paragraph{EXP-4: Missing Data Robustness.}
 Under 20\% missing data (typical for Francophone Africa), RSI F1
@@ -552,7 +557,10 @@ loses $> 22\%$ F1. At 50\% missing data, RSI remains functional
 
 \paragraph{EXP-5: ELBO Convergence (Theorem~\ref{thm:elbo}).}
 The ELBO sequence is empirically monotone non-decreasing and converges
-within 7 iterations, confirming Theorem~\ref{thm:elbo}.
+within 7 iterations, confirming Theorem~\ref{thm:elbo}. The small
+absolute change in ELBO reflects the proximity of the variational
+posterior to the prior at convergence, consistent with the
+zero-shot regime where labeled data are absent.
 
 \subsection{Interpretability: A Worked Example}
 
@@ -619,7 +627,7 @@ Three theorems establish RSI's foundations: $O(1)$ adaptability (T1),
 Bernstein-von Mises consistency (T2), and monotone ELBO convergence
 (T3). Experiments on RSI-Togo-Fiscal-Synthetic v1.0---grounded in
 real Togolese fiscal law---validate all three empirically and
-demonstrate a $2{,}000\times$ update speedup over retraining-based
+demonstrate at least a $600\times$ update speedup over retraining-based
 methods.
 
 RSI is designed for the realities of rule-governed environments in
