@@ -4,6 +4,10 @@
 
 **Abdou-Raouf Atarmla** — Togo DataLab / INPT Rabat
 
+[![arXiv](https://img.shields.io/badge/arXiv-2503.XXXXX-b31b1b.svg)](https://arxiv.org/abs/2503.XXXXX)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fless-lab/rsi-togo-fiscal/blob/master/notebooks/rsi_demo.ipynb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ---
 
 ## What is RSI?
@@ -29,14 +33,15 @@ Three theoretical guarantees are proven:
 
 | Model | F1 | AUC | Labels needed? | Update cost |
 |---|---|---|---|---|
-| **RSI (ours)** | **0.519** | **0.599** | **No** | **1ms** |
+| **RSI (ours)** | **0.519** | **0.599** | **No** | **< 1ms** |
 | Rule-Based System | 0.182 | — | No | ~0ms |
-| XGBoost† | 0.971 | 0.999 | Yes | 745ms retrain |
-| MLP† | 0.322 | 0.788 | Yes | 128ms retrain |
+| XGBoost† | 0.967 | 0.999 | Yes | 683–1082ms retrain |
+| MLP† | 0.322 | 0.788 | Yes | 102–146ms retrain |
 
 †Full supervision required. RSI operates zero-shot.
 
-**745× speedup** over full retraining on regulatory change events.
+**At least 600× speedup** over full retraining on regulatory change events.
+Absolute timings are hardware-dependent; the O(1) complexity guarantee is machine-independent.
 
 ---
 
@@ -47,13 +52,13 @@ rsi-togo-fiscal/
 ├── paper/
 │   ├── latex/
 │   │   ├── rsi_paper_en.tex
-│   │   └── rsi_paper_fr.tex
+│   │   ├── rsi_paper_fr.tex
 │   │   ├── rsi_paper_appendix_en.tex
-│   │   └── rsi_paper_appendix_fr.tex      
+│   │   └── rsi_paper_appendix_fr.tex
 │   └── pdf/
 │       ├── rsi_paper_en.pdf
-│       └── rsi_paper_fr.pdf
-│       └── rsi_paper_appendix_en.pdf
+│       ├── rsi_paper_fr.pdf
+│       ├── rsi_paper_appendix_en.pdf
 │       └── rsi_paper_appendix_fr.pdf
 ├── data/
 │   └── rsi_dataset.csv           # RSI-Togo-Fiscal-Synthetic v1.0
@@ -61,6 +66,8 @@ rsi-togo-fiscal/
 │   ├── rsi_engine.py             # RSI inference engine
 │   ├── rsi_baselines.py          # XGBoost, MLP, RBS baselines
 │   └── rsi_experiments.py        # Full experiment pipeline
+├── notebooks/
+│   └── rsi_demo.ipynb            # Interactive demonstration
 ├── tests/
 │   └── evaluate_single_company.py
 ├── rsi_results.png               # Experimental results figure
@@ -81,6 +88,9 @@ python tests/evaluate_single_company.py
 
 # Run all experiments
 python src/rsi_experiments.py
+
+# Interactive demo
+jupyter notebook notebooks/rsi_demo.ipynb
 ```
 
 ---
@@ -146,8 +156,8 @@ python src/rsi_experiments.py
 
 # Expected outputs:
 # EXP-1: RSI F1=0.519, AUC=0.599 (zero-shot, no labels)
-# EXP-2: RSI update ~1ms vs XGBoost ~745ms retrain
-# EXP-3: BvM consistency confirmed
+# EXP-2: RSI update < 1ms vs XGBoost 683-1082ms retrain (at least 600×)
+# EXP-3: BvM consistency — general decreasing uncertainty trend
 # EXP-4: RSI F1 stable under 50% missing data
 # EXP-5: ELBO converges in 7 iterations (T3 confirmed)
 ```
@@ -163,8 +173,9 @@ If you use this work, please cite:
   title   = {Rule-State Inference ({RSI}): A Bayesian Framework
              for Compliance Monitoring in Rule-Governed Domains},
   author  = {Atarmla, Abdou-Raouf},
+  journal = {arXiv preprint arXiv:2503.XXXXX},
   year    = {2026},
-  note    = {Preprint. \url{https://github.com/fless-lab/rsi-togo-fiscal}}
+  url     = {https://arxiv.org/abs/2503.XXXXX}
 }
 ```
 
