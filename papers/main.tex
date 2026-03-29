@@ -15,6 +15,8 @@
 \usepackage{float}
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
 \usepackage{caption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, calc}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{corollary}{Corollary}[theorem]
@@ -45,48 +47,41 @@
 %% ─────────────────────────────────────────────────────────────
 \begin{abstract}
 \noindent
-Existing approaches to compliance monitoring, including supervised
-classifiers, Markov Logic Networks, and Probabilistic Soft Logic,
-share a fundamental epistemic assumption: they treat observed data as
-the primary source of knowledge and either learn rules from data or
-require large labeled datasets of known violations. This assumption is
-structurally invalid in \emph{rule-governed domains} such as taxation,
-medical protocol compliance, or environmental regulation, where
-authoritative rules are \emph{known a priori}, labeled non-compliance
-examples are scarce or legally unavailable, and regulatory parameters
-change frequently.
+In rule-governed domains such as taxation, medical compliance, and
+environmental regulation, compliance monitoring faces a structural
+challenge: authoritative rules are known, but labeled violations do
+not exist, 18--50\% of observations are routinely missing, and
+regulatory parameters change multiple times per year. Supervised
+classifiers cannot operate without labels. Rule-based systems collapse
+under missing data. Neither adapts to regulatory change without full
+retraining.
 
-We propose \textbf{Rule-State Inference (RSI)}, a Bayesian framework
-that inverts this paradigm. RSI encodes regulatory rules as structured
-priors and casts compliance monitoring as posterior inference over a
-latent rule-state space $\mathbf{S} = \{c_i\}_{i=1}^n$, where
-$c_i \in [0,1]$ is the population-level compliance rate for rule
-$r_i$. RSI operates at two complementary levels: \emph{population-level
-Bayesian inference} estimates compliance rates with calibrated
-uncertainty, while \emph{entity-level deterministic scoring} identifies
-non-compliant entities per rule without any labeled data. We prove
-three theoretical guarantees: \textbf{(T1)}~RSI absorbs regulatory
-parameter changes in $O(1)$ time via a prior-ratio correction,
-independently of dataset size; \textbf{(T2)}~the variational posterior
-is Bernstein-von Mises consistent, with uncertainty shrinking at rate
-$1/\sqrt{N}$; \textbf{(T3)}~coordinate ascent variational inference
-monotonically maximizes the Evidence Lower Bound (ELBO).
+We show that encoding regulatory rules as Bayesian priors and casting
+compliance monitoring as posterior inference addresses all three
+constraints simultaneously. Our framework, \textbf{Rule-State
+Inference (RSI)}, operates at two levels: population-level Bayesian
+inference estimates per-rule compliance rates with calibrated
+uncertainty, while entity-level deterministic scoring identifies
+non-compliant entities without any labeled data. The conjugate
+formulation yields $O(1)$ regulatory adaptability,
+Bernstein-von Mises consistency ($\sigma \sim 1/\sqrt{N}$), and
+monotone ELBO convergence.
 
-We instantiate RSI on the Togolese fiscal system and introduce
-\textbf{RSI-Togo-Fiscal-Synthetic v2.0}, a publicly released benchmark
-of 2{,}000 synthetic enterprises with 8 fiscal rules, grounded in real
-OTR regulatory rules (2022--2025) and including a documented regulatory
-change event. Evaluated per rule, RSI achieves mean F1\,=\,0.741 and
-mean AUC\,=\,0.859 in zero-shot mode (no labels), outperforming
-rule-based systems (mean F1\,=\,0.700). Under 50\% missing data, the
-advantage widens to $+$0.25--0.37 per rule. RSI absorbs regulatory
-changes in under 0.002\,ms versus over 1{,}000\,ms for full model
-retraining, a speedup exceeding $500{,}000\times$.
+Evaluated on a benchmark of 2{,}000 synthetic enterprises with 8
+fiscal rules grounded in real Francophone African regulatory law, RSI
+achieves mean F1\,=\,0.741 and AUC\,=\,0.859 in zero-shot mode.
+Its primary advantage emerges under data degradation: at 50\% missing
+data, RSI's per-rule F1 advantage over rule-based systems widens from
+$+$0.041 to $+$0.25--0.37, while entity-level scoring remains fully
+invariant to prior misspecification. RSI absorbs regulatory threshold
+changes in 0.002\,ms versus $>$1{,}000\,ms for retraining
+($>$500{,}000$\times$). Framework, dataset, and code are released
+publicly.
 
 \medskip
-\noindent\textbf{Keywords:} Bayesian inference, rule-governed domains,
-compliance monitoring, variational inference, zero-shot reasoning,
-fiscal compliance, Africa
+\noindent\textbf{Keywords:} compliance monitoring, missing data,
+Bayesian inference, rule-governed domains, zero-shot inference,
+fiscal systems, Africa
 \end{abstract}
 
 \newpage
@@ -126,39 +121,41 @@ weights as quantities to be \emph{learned} from data, inverting the
 epistemic direction: rules are outputs, not inputs. Neurosymbolic
 methods~\citep{garcez2022neural} combine neural perception and symbolic
 reasoning, but their symbolic component remains a learned approximation
-rather than an authoritative prior. None of these frameworks provides:
-(i)~zero-shot compliance assessment from authoritative rules alone,
-(ii)~$O(1)$ adaptation to regulatory parameter changes, or
-(iii)~calibrated uncertainty quantification interpretable by
-non-technical auditors.
+rather than an authoritative prior. These frameworks do not
+simultaneously address: (i)~zero-shot compliance assessment from
+authoritative rules alone, (ii)~$O(1)$ adaptation to regulatory
+parameter changes, and (iii)~calibrated uncertainty quantification
+interpretable by non-technical auditors.
 
 \medskip
 \noindent\textbf{Our contributions.}
-We propose \textbf{RSI (Rule-State Inference)}, a Bayesian framework
-that formalizes compliance monitoring as posterior inference from
-authoritative rules. Our contributions are:
 \begin{enumerate}[leftmargin=2em, label=(\arabic*)]
+  \item \textbf{Empirical demonstration} that Bayesian inference from
+        authoritative rules produces viable compliance monitoring
+        under the zero-label, high-missing-data conditions typical of
+        rule-governed environments: mean F1\,=\,0.741 and
+        AUC\,=\,0.859 per rule in zero-shot mode, with the advantage
+        over rule-based systems widening to $+$0.25--0.37 under 50\%
+        missing data, and full invariance to prior misspecification
+        (Section~\ref{sec:experiments}).
   \item \textbf{The RSI framework}: a formalization of compliance
         monitoring as posterior inference over a latent rule-state
-        space, where regulatory rules are encoded as structured priors.
-        RSI operates at two levels: population-level Bayesian inference
-        and entity-level deterministic scoring
+        space, operating at two levels: population-level Bayesian
+        inference and entity-level deterministic scoring
         (Section~\ref{sec:framework}).
-  \item \textbf{Three theoretical guarantees}: $O(1)$ regulatory
-        adaptability (T1), Bernstein-von Mises posterior consistency
-        (T2), and monotone ELBO convergence (T3)
-        (Section~\ref{sec:theory}).
-  \item \textbf{RSI-Togo-Fiscal-Synthetic v2.0}: a publicly released
-        benchmark grounded in Togolese fiscal law, encoding 8 rules
-        and a documented regulatory change event
-        (Section~\ref{sec:experiments}).
-  \item \textbf{Empirical validation} across five experiments
-        demonstrating per-rule zero-shot viability
-        (mean~F1\,=\,0.741, mean~AUC\,=\,0.859),
-        a $>$500{,}000$\times$ update speedup, and graceful
-        degradation under 50\% missing data
-        (Section~\ref{sec:experiments}).
+  \item \textbf{Desirable formal properties} inherited from the
+        conjugate structure: $O(1)$ regulatory adaptability (T1),
+        Bernstein-von Mises consistency (T2), and monotone ELBO
+        convergence (T3) (Section~\ref{sec:theory}).
+  \item \textbf{A publicly released benchmark} grounded in
+        Francophone African fiscal law, encoding 8 rules, a
+        documented regulatory change event, and controlled
+        missingness regimes (Section~\ref{sec:experiments}).
 \end{enumerate}
+
+\noindent The current framework addresses the single-period case. We
+show in Section~\ref{sec:discussion} how it serves as the mathematical
+foundation for sequential entity-level tracking via a State Space Model.
 
 \medskip
 \noindent\textbf{Why Francophone Africa.}
@@ -208,8 +205,9 @@ states}, a qualitatively different inference target.
 \paragraph{AI and tax compliance.}
 ML has been applied to tax gap estimation~\citep{gomes2022machine},
 audit selection, and VAT fraud detection, universally under supervised
-paradigms requiring labeled non-compliance examples. No prior work
-formalizes compliance monitoring as zero-shot Bayesian state inference.
+paradigms requiring labeled non-compliance examples. We are not aware
+of prior work that formalizes compliance monitoring as zero-shot
+Bayesian state inference from authoritative rules.
 
 \paragraph{Missing data and low-resource learning.}
 Fr\'enay and Verleysen~\citeyearpar{frenay2014classification} survey
@@ -270,12 +268,12 @@ itself uncertain. The general RSI framework supports both conditioned
 and inferred applicability; we leave the inferred case to future work.
 \end{remark}
 
-\noindent\textbf{Core insight.} RSI's inference target has no equivalent
-in existing ML frameworks. MLNs and PSL have rule \emph{weights}
-(inferred from data); RSI has rule \emph{states} (inferred given rules).
-The epistemic direction is inverted: supervised approaches go
+\noindent\textbf{Core insight.} RSI's inference target differs
+qualitatively from existing ML frameworks. MLNs and PSL infer rule
+\emph{weights} from data; RSI infers rule \emph{states} given rules.
+The epistemic direction is reversed: supervised approaches go
 data~$\to$~rule~weights; RSI goes rules~+~data~$\to$~compliance~states.
-This inversion is the structural property that enables zero-shot
+This reversal is the structural property that enables zero-shot
 operation and $O(1)$ regulatory adaptation.
 
 \subsection{The Prior $P(\mathbf{S})$: Rules as Structured Priors}
@@ -356,6 +354,63 @@ entity-level Bayesian inference and is developed in future work
 (Section~\ref{sec:discussion}).
 \end{remark}
 
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.8cm and 1.2cm,
+    box/.style={rectangle, draw, rounded corners=3pt, minimum height=0.9cm,
+                minimum width=2.8cm, align=center, font=\small},
+    data/.style={box, fill=blue!8},
+    proc/.style={box, fill=orange!12},
+    output/.style={box, fill=green!10},
+    future/.style={box, fill=gray!15, dashed},
+    arr/.style={-{Stealth[length=2.5mm]}, thick},
+    annot/.style={font=\scriptsize\itshape, text=gray!70!black},
+]
+
+% Input
+\node[data] (rules) {Regulatory Rules\\$\mathcal{R}, \alpha_i, \beta_i$};
+\node[data, right=1.8cm of rules] (obs) {Observations $\mathbf{D}$\\(noisy, partial)};
+
+% Domain adapter
+\node[proc, below=0.9cm of $(rules)!0.5!(obs)$] (adapter) {Domain Adapter\\$d_j \to s_{ji} \in \{0,1\}$};
+
+% Two levels
+\node[proc, below left=1.0cm and 0.3cm of adapter] (pop) {\textbf{Level 1: Bayesian}\\$Q^*(c_i) = \mathrm{Beta}(\bar\alpha, \bar\beta)$};
+\node[proc, below right=1.0cm and 0.3cm of adapter] (ent) {\textbf{Level 2: Deterministic}\\$\mathrm{NC}_{ji} = 1 - s_{ji}^{\mathrm{raw}}$};
+
+% Outputs
+\node[output, below=0.9cm of pop] (popout) {Population rates\\$\mathbb{E}[c_i] \pm \sigma$};
+\node[output, below=0.9cm of ent] (entout) {Entity scores\\per-rule ranking};
+
+% Future
+\node[future, below=0.7cm of $(popout)!0.5!(entout)$] (seq) {Sequential RSI (future)\\$\mathrm{posterior}(t) \to \mathrm{prior}(t{+}1)$};
+
+% Arrows
+\draw[arr] (rules) -- (adapter);
+\draw[arr] (obs) -- (adapter);
+\draw[arr] (adapter) -| (pop) node[annot, pos=0.3, left] {$s_{ji}^{\mathrm{disc}}$};
+\draw[arr] (adapter) -| (ent) node[annot, pos=0.3, right] {$s_{ji}^{\mathrm{raw}}$};
+\draw[arr] (pop) -- (popout);
+\draw[arr] (ent) -- (entout);
+\draw[arr, dashed, gray] (popout) -- (seq);
+\draw[arr, dashed, gray] (entout) -- (seq);
+
+% Users
+\node[annot, below=0.15cm of popout] {Policy maker};
+\node[annot, below=0.15cm of entout] {Auditor};
+
+\end{tikzpicture}
+\caption{RSI two-level architecture. Regulatory rules and noisy
+         observations enter the domain adapter, which produces
+         compliance signals. Level~1 (Bayesian) infers population
+         compliance rates; Level~2 (deterministic) scores individual
+         entities. The two levels serve different institutional users.
+         Sequential RSI (dashed) will couple both levels via temporal
+         recursion.}
+\label{fig:architecture}
+\end{figure}
+
 \subsection{Posterior Inference}
 
 \[
@@ -432,8 +487,14 @@ Aggregate per policy: $\mathrm{NC}_j = f(\{\mathrm{NC}_{ji}\})$
 \end{algorithm}
 
 %% ─────────────────────────────────────────────────────────────
-\section{Theoretical Guarantees}
+\section{Formal Properties}
 \label{sec:theory}
+
+The conjugate structure of RSI yields three properties that are
+particularly valuable in rule-governed domains. While these results
+leverage known conjugacy and variational inference theory, their
+application to the compliance inference setting is novel and provides
+concrete operational guarantees.
 
 \subsection{T1: $O(1)$ Regulatory Adaptability}
 
@@ -547,7 +608,9 @@ We introduce \textbf{RSI-Togo-Fiscal-Synthetic v2.0}, a benchmark of
 (sector, region, declared turnover), latent ground truth
 $(c_i^*, \delta_i^*)$ per rule, noisy observations with systematic
 under-declaration ($\hat{x}/x \sim \operatorname{Beta}(7,3)$,
-mean~0.70) and 18--20\% missing data, and binary labels derived from
+mean~0.70, consistent with the scale of under-reporting documented in
+Sub-Saharan African informal economies where the informal sector
+accounts for 25--65\% of GDP~\citep{medina2017informal}) and 18--20\% missing data, and binary labels derived from
 ground truth for baseline evaluation only (not used by RSI).
 
 Eight fiscal rules are encoded, spanning the full range of Togolese
@@ -569,14 +632,24 @@ $\operatorname{Beta}(c \cdot \kappa,\, (1{-}c) \cdot \kappa)$ with
 $\kappa=10$, ensuring unbiased signals centered on the true
 entity-level compliance rate.
 
+\noindent\textbf{Benchmark purpose.} The benchmark is not designed to
+replicate ground-truth fiscal reality, but to stress-test inference
+under controlled missingness, noise, and regulatory change regimes.
+Ground-truth compliance labels do not exist in real fiscal systems;
+the synthetic benchmark provides the controlled environment necessary
+to evaluate structural properties (convergence, robustness, adaptation
+speed) that cannot be measured on unlabeled real data.
+
 \subsection{Baselines and Experimental Setup}
 
-We compare RSI against three baselines:
+We compare RSI against four baselines:
 
 \begin{description}[leftmargin=1.5em]
   \item[RBS] Deterministic Rule-Based System: flags entities when
         the discretized signal $s_{ji}^{\mathrm{disc}} = 0$ for any
         applicable rule.
+  \item[LR$^\dagger$] Logistic Regression (standardized features),
+        trained on 70\% labeled data.
   \item[XGBoost$^\dagger$] \citep{chen2016xgboost}: gradient boosted
         trees (150 estimators, depth~4), trained on 70\% labeled data.
   \item[MLP$^\dagger$] Feed-forward network (128-64-32, ReLU, early
@@ -631,7 +704,12 @@ largest gains on rules with high non-compliance prevalence: R1\_TVA
 ($+$0.100), R4\_TPU ($+$0.105), and R6\_PAT ($+$0.058). The mean AUC
 of 0.859 confirms that RSI's continuous compliance signals provide
 strong discriminative power across all rules. Importantly, RSI achieves
-these results without any labeled data.
+these results without any labeled data. On the secondary global task
+(``any rule non-compliant,'' NC prevalence 93.5\%), supervised baselines
+with 70\% labeled data achieve F1 of 0.965 (LR), 0.860 (XGBoost), and
+0.840 (MLP); these high scores reflect the inflated prevalence of the
+OR-aggregated label rather than discriminative power, reinforcing that
+per-rule evaluation is the appropriate primary metric.
 
 \paragraph{EXP-1b: Population-Level Calibration.}
 
@@ -760,6 +838,48 @@ sweep (2 iterations including initialization), as expected under exact
 conjugacy. The ELBO sequence is strictly non-decreasing, confirming
 Theorem~\ref{thm:elbo} empirically.
 
+\paragraph{EXP-6: Prior Sensitivity Analysis.}
+
+A key concern for any Bayesian system is robustness to prior
+misspecification. We evaluate RSI under five prior configurations:
+the domain-informed priors used throughout (``Correct''), uniform
+priors $\mathrm{Beta}(1,1)$, deliberately inverted priors
+$\mathrm{Beta}(3,7)$, strongly wrong priors $\mathrm{Beta}(20,2)$,
+and weak priors $\mathrm{Beta}(2,2)$.
+
+\begin{table}[H]
+\centering
+\caption{Entity-level F1 and population $\mathbb{E}[c_i]$ under prior
+         misspecification. Entity scoring is fully invariant;
+         population posteriors converge despite wrong priors.}
+\label{tab:sensitivity}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l c cccc}
+\toprule
+\textbf{Prior config.} & \textbf{Mean F1}
+  & \multicolumn{4}{c}{\textbf{Population $\mathbb{E}[c_i]$}} \\
+\cmidrule(lr){3-6}
+& & R1\_TVA & R4\_TPU & R7\_DECL & R8\_BANK \\
+\midrule
+Correct $(\alpha{=}7, \beta{=}3)$ & 0.741 & 0.396 & 0.346 & 0.753 & 0.486 \\
+Uniform $(1, 1)$                   & 0.741 & 0.390 & 0.345 & 0.753 & 0.485 \\
+Inverted $(3, 7)$                  & 0.741 & 0.387 & 0.344 & 0.751 & 0.484 \\
+Strong wrong $(20, 2)$             & 0.741 & 0.413 & 0.355 & 0.756 & 0.491 \\
+Weak $(2, 2)$                      & 0.741 & 0.390 & 0.345 & 0.753 & 0.486 \\
+\midrule
+True $c_i^*$                       &       & 0.426 & 0.345 & 0.666 & 0.491 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Entity-level F1 is \emph{perfectly invariant} to prior choice
+(0.741 across all configurations), because entity scoring is
+deterministic and does not depend on the prior. Population posteriors
+vary by at most 0.027 across prior configurations (R1\_TVA: 0.387 to
+0.413), confirming that with $n > 400$ observations per rule, the data
+dominate the prior. This is Theorem~\ref{thm:bvm} in action:
+asymptotic recovery holds regardless of prior specification.
+
 \subsection{Interpretability: A Worked Example}
 
 Consider entity E00004, a small formal enterprise with declared
@@ -787,6 +907,19 @@ the worst rule, (ii)~the severity of non-compliance on each rule, and
 this entity is below the population average). The framework is the
 explanation: no post-hoc tool (SHAP, LIME) is required.
 
+\paragraph{Sequential anticipation.}
+Under sequential RSI, the diagnosis above would become the starting
+point for longitudinal tracking. If E00004 is observed again at period
+$t{+}1$ with a similarly low bank formalization signal, its NC score
+of 0.93 becomes the prior: the entity posterior concentrates, and the
+presumption shifts from \emph{possible irregularity} to
+\emph{structural non-compliance}. Conversely, if E00004 regularizes
+its bank formalization at $t{+}1$, the posterior corrects upward,
+indicating the initial score reflected a transient issue rather than
+systematic evasion. This distinction between transient and structural
+non-compliance is impossible in the single-period setting but emerges
+naturally from the sequential State Space Model formulation.
+
 %% ─────────────────────────────────────────────────────────────
 \section{Discussion}
 \label{sec:discussion}
@@ -796,8 +929,8 @@ RSI is not a classifier competing for predictive accuracy on labeled
 datasets. It is a framework for compliance monitoring when labels do
 not exist. The per-rule F1 comparison with RBS (Table~\ref{tab:perrule})
 establishes that RSI's entity-level scoring is non-degenerate and
-consistently superior to deterministic rule-checking, particularly
-under missing data. Supervised baselines (XGBoost, MLP) are shown as
+consistently superior to binary rule-checking, particularly
+under missing data. Supervised baselines (LR, XGBoost, MLP) are shown as
 a reference ceiling for the global task; they solve a different problem
 (discriminative classification with labels) and cannot operate in the
 zero-label setting that RSI addresses.
@@ -808,11 +941,32 @@ The population posterior converges at the proven BvM rate
 the discretized signal, not the true latent rate. This distinction
 explains the 4/8 calibration result in Table~\ref{tab:calibration}:
 the four misses occur on rules where the discretization threshold
-(0.5) introduces systematic bias. Signal calibration and posterior
-convergence are orthogonal properties. Improving signal fidelity, for
-instance via continuous Beta-likelihood signals or domain-specific
-correction factors, would improve population calibration without
-modifying the inference framework.
+(0.5) introduces systematic bias. The natural correction is a
+continuous Beta-likelihood formulation: instead of
+$s_{ji} \mid c_i \sim \mathrm{Bernoulli}(c_i)$, one models
+$s_{ji}^{\mathrm{raw}} \mid c_i \sim \mathrm{Beta}(c_i \kappa,
+(1{-}c_i)\kappa)$, which eliminates discretization entirely. For
+R3\_IMF (true $c^* = 0.876$, current $\mathbb{E}[c_i] = 0.950$),
+the continuous formulation would recover a posterior centered near
+the true value. This extension preserves approximate conjugacy under
+moment-matching and is implemented in the next version of RSI.
+
+\paragraph{Strategic missingness.}
+The current missing-data treatment assigns unit likelihood
+$P(d_j \mid \mathbf{S}) \equiv 1$ to absent observations, preserving
+the prior without bias. This is mathematically principled under the
+assumption that data is Missing Completely At Random (MCAR). However,
+in fiscal environments, missingness is often strategic: an enterprise
+that fails to file a VAT declaration may be actively evading
+compliance (Missing Not At Random, MNAR). The RSI core preserves
+its unbiased treatment by design, but the domain adapter can
+accommodate a configurable \emph{silence penalty}: when an observation
+is missing for an applicable rule, the adapter assigns an elevated
+non-compliance score (e.g., $\mathrm{NC}_{ji} = 0.7$ instead of
+$0.5$). The penalty value is set by the institutional decision-maker
+based on domain expertise, not learned from data, consistent with
+RSI's philosophy that domain knowledge enters through the adapter,
+not through the inference engine.
 
 \paragraph{Operational regime and missing data.}
 The mean F1 advantage of RSI over RBS ($+$0.041) under complete data
@@ -823,6 +977,35 @@ per rule. This is because RSI's neutral-signal treatment of missing
 observations preserves the prior, while RBS simply ignores missing
 rules. The advantage is structural, not parametric: it holds regardless
 of the specific rules or domain.
+
+\paragraph{Operational impact for fiscal administrations.}
+In a typical West African fiscal administration, an auditor reviews
+taxpayer dossiers manually, with no systematic risk prioritization
+across rules. RSI changes this workflow concretely: for each entity,
+the auditor receives a per-rule severity ranking (e.g., ``R8\_BANK is
+the primary risk, R5\_IRPP is secondary'') with population context
+(``this entity's bank formalization score is below the population
+average''). This eliminates the need for post-hoc explanation tools and
+enables targeted audits. When a regulatory threshold changes (as occurs
+multiple times per fiscal year in Togo), RSI updates in under
+0.002\,ms with no retraining, no new labels, and no data scientist
+intervention. For administrations with limited technical capacity, this
+operational simplicity is as valuable as the statistical guarantees.
+
+\paragraph{Synthetic data and validation strategy.}
+The current evaluation relies on synthetic data, which is a deliberate
+choice rather than an oversight. Ground-truth compliance labels do not
+exist in real fiscal systems: compliance is inferred, not observed.
+This is precisely the constraint that motivates RSI. Our synthetic
+benchmark is grounded in real regulatory rules
+(Law~n\textdegree{}2024-007), under-declaration ratios
+consistent with IMF estimates of informal economy
+size~\citep{medina2017informal}, and realistic market
+segmentation. We validate not against synthetic labels (which would be
+circular) but against the structural properties of the inference
+(convergence rates, prior robustness, missing data behavior). Pilot
+deployment with a fiscal administration using real data streams is
+planned and will provide complementary validation.
 
 \paragraph{Entity-level aggregation as domain policy.}
 The definition of entity-level non-compliance is a domain-specific
@@ -848,15 +1031,42 @@ applicability is itself uncertain (e.g., cross-border regulation),
 the activation variable $a_i$ can be reintroduced as a latent
 Bernoulli, as noted in Remark~1.
 
-\paragraph{Sequential RSI.}
-The current framework provides population-level Bayesian inference and
-deterministic entity scoring. Individual-level Bayesian inference
-requires repeated observations of the same entity over time. Sequential
-RSI, where the posterior at period $t$ becomes the prior at period
-$t{+}1$, enables entity-level Bayesian tracking. After $T$ periods,
-the entity posterior concentrates at rate $1/\sqrt{T \cdot K}$, where
-$K$ is the number of applicable rules. This extension connects RSI to
-the Kalman filtering literature and is developed in future work.
+\paragraph{Why entity scoring is deterministic (and what comes next).}
+The separation between population inference (Bayesian) and entity
+scoring (deterministic) is a deliberate architectural choice, not a
+limitation. The two levels serve different institutional users and
+answer different questions. Population posteriors inform
+\emph{policy}: resource allocation across rules, reform impact
+assessment, cross-regional comparison. Entity scores inform
+\emph{operations}: which entity to audit, on which rule, with what
+priority. These are complementary outputs, not competing ones.
+
+Entity scoring is deterministic because, in the current single-period
+setting, each entity provides exactly one observation per rule. With a
+single observation, no meaningful posterior can be formed at the entity
+level: the Bayesian update would be dominated entirely by the prior,
+adding no information. The deterministic score
+$\mathrm{NC}_{ji} = 1 - s_{ji}^{\mathrm{raw}}$ is the honest answer
+given one observation.
+
+\emph{Sequential RSI} changes this. When the same entity is observed
+across $T$ periods, the posterior at period $t$ becomes the prior at
+$t{+}1$, enabling genuine entity-level Bayesian tracking. This
+recursive structure makes Sequential RSI a \emph{State Space Model}
+(SSM): the compliance state $(c_i, \delta_i)$ is the hidden state,
+the regulatory rules define the transition model (how compliance
+evolves between periods), and the declarations are the noisy
+observations. SSMs are the standard framework for tracking hidden
+quantities that evolve over time, from navigation (Kalman filter)
+to speech recognition to modern sequence modeling. In the RSI
+setting, the SSM formulation enables three capabilities that the
+current single-period framework cannot provide: (i)~distinguishing
+transient non-compliance (a missed declaration) from structural
+non-compliance (systematic evasion), (ii)~detecting compliance
+\emph{trends} (an entity gradually drifting toward non-compliance),
+and (iii)~producing entity-level uncertainty that decreases as
+observations accumulate, at concentration rate $1/\sqrt{T \cdot K}$.
+Sequential RSI is under active development.
 
 \paragraph{Limitations.}
 Inference quality depends on prior accuracy. Misspecified priors bias
@@ -873,24 +1083,25 @@ administrations will validate performance on real data streams.
 \label{sec:conclusion}
 
 We have introduced \textbf{Rule-State Inference (RSI)}, a Bayesian
-framework that formally inverts the dominant paradigm in compliance
-monitoring. By encoding authoritative regulatory rules as structured
-priors and casting compliance assessment as posterior inference over a
-latent rule-state space, RSI provides capabilities that no existing
-framework offers simultaneously: zero-shot compliance monitoring at
-two levels (population inference and entity scoring), $O(1)$ regulatory
-adaptability, native uncertainty quantification, and full
-interpretability.
+framework that formalizes compliance monitoring as posterior inference
+from authoritative regulatory rules. By encoding rules as structured
+priors over a latent rule-state space, RSI provides practical
+capabilities for the constraints of rule-governed environments:
+zero-shot compliance monitoring at two levels (population inference
+and entity scoring), $O(1)$ regulatory adaptability, native
+uncertainty quantification, and full interpretability without
+post-hoc explanation tools.
 
-Three theorems establish RSI's foundations: $O(1)$ adaptability (T1),
-Bernstein-von Mises consistency (T2), and monotone ELBO convergence
-(T3). Experiments on RSI-Togo-Fiscal-Synthetic v2.0, grounded in real
-Togolese fiscal law, validate all three empirically. Evaluated per
-rule, RSI achieves mean F1\,=\,0.741 and mean AUC\,=\,0.859 without
-any labeled data, consistently outperforming rule-based systems and
-dominating under the 18--50\% missing data rates typical of the target
-environment. RSI absorbs regulatory changes in under 0.002\,ms, a
-speedup exceeding $500{,}000\times$ over retraining-based methods.
+The formulation inherits three formal properties from its conjugate
+structure: $O(1)$ adaptability (T1), Bernstein-von Mises consistency
+(T2), and monotone ELBO convergence (T3), all validated empirically.
+Evaluated per rule on a benchmark grounded in real fiscal law, RSI
+achieves mean F1\,=\,0.741 and AUC\,=\,0.859 without any labeled data.
+Its primary advantage emerges under missing data: at 50\% missing,
+RSI's per-rule advantage over rule-based systems widens to
+$+$0.25--0.37, while entity-level scoring remains fully invariant to
+prior specification. RSI absorbs regulatory changes in under
+0.002\,ms, a speedup exceeding $500{,}000\times$.
 
 RSI is designed for the realities of rule-governed environments in the
 Global South: frequent regulatory changes, structural data scarcity,
@@ -899,11 +1110,11 @@ We release the full framework, dataset, and implementation to support
 reproducible research.
 
 \medskip
-\noindent\textbf{Future work:} sequential RSI for longitudinal
-entity-level Bayesian tracking, multi-country extensions across the
-ECOWAS fiscal zone, continuous Beta-likelihood signals for improved
-population calibration, and pilot deployment with the Office Togolais
-des Recettes.
+\noindent\textbf{Future work:} sequential RSI as a full State Space
+Model for longitudinal entity-level Bayesian tracking, multi-country
+extensions across the ECOWAS fiscal zone, continuous Beta-likelihood
+signals for improved population calibration, and pilot deployment
+with the Office Togolais des Recettes.
 
 %% ─────────────────────────────────────────────────────────────
 \section*{Acknowledgments}
@@ -979,6 +1190,11 @@ Letham, B., Rudin, C., McCormick, T. H., and Madigan, D. (2015).
 Interpretable classifiers using rules and Bayesian analysis.
 \textit{Annals of Applied Statistics}, 9(3):1350--1371.
 
+\bibitem[Medina et al.(2017)]{medina2017informal}
+Medina, L., Jonelis, A., and Cangul, M. (2017).
+The informal economy in Sub-Saharan Africa: Size and determinants.
+\textit{IMF Working Paper}, WP/17/156.
+
 \bibitem[OTR(2024)]{otr2024lf}
 Office Togolais des Recettes (2024).
 Loi n\textdegree{}2024-007 du 30 d\'ecembre 2024 portant loi de finances
@@ -1001,7 +1217,6 @@ Cambridge University Press.
 
 \end{thebibliography}
 
-\newpage
 \appendix
 \input{appendix}
 

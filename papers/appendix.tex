@@ -1,0 +1,370 @@
+%% RSI Appendix — To be included via \input{appendix}
+\section{Appendix: Supplementary Material}
+\label{sec:appendix}
+
+%% ─────────────────────────────────────────────────────────────
+%% A.1 — HYPERPARAMETERS
+%% ─────────────────────────────────────────────────────────────
+
+\subsection{Hyperparameters}
+
+Table~\ref{tab:hyperparams} lists all hyperparameters used in the RSI
+Togolese fiscal instantiation. All values are derived from institutional
+knowledge (OTR fiscal rules, historical compliance estimates) or set to
+standard non-informative values. No hyperparameter is learned from
+labeled data.
+
+\begin{table}[H]
+\centering
+\caption{RSI hyperparameters. Prior parameters encode institutional
+         knowledge; inference parameters are standard.}
+\label{tab:hyperparams}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{llll}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Scope} & \textbf{Justification} \\
+\midrule
+\multicolumn{4}{l}{\textit{Prior hyperparameters (per rule)}} \\
+$\alpha_i, \beta_i$ & See Table~\ref{tab:rule_priors} & Per rule & OTR historical rates \\
+$\sigma_i$ (drift) & 0.5--2.0 & Per rule & Expected parametric stability \\
+\midrule
+\multicolumn{4}{l}{\textit{Inference parameters}} \\
+$\sigma_{\mathrm{obs}}$ & 0.0625 & Global & Observation noise scale \\
+$\varepsilon$ (ELBO tol.) & $10^{-8}$ & Global & Standard convergence criterion \\
+Max iterations & 100 & Global & Upper bound (converges in 2) \\
+$\tau$ (discretization) & 0.5 & Global & Neutral threshold \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Per-rule prior parameters.}
+\label{tab:rule_priors}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{llccl}
+\toprule
+\textbf{Rule} & \textbf{Description} & $\alpha_i$ & $\beta_i$
+  & $\mathbb{E}[c_i]$ \\
+\midrule
+R1\_TVA  & Value Added Tax          & 7 & 3 & 0.70 \\
+R2\_IS   & Corporate Income Tax     & 6 & 4 & 0.60 \\
+R3\_IMF  & Minimum Tax              & 7 & 3 & 0.70 \\
+R4\_TPU  & Informal Sector Tax      & 5 & 5 & 0.50 \\
+R5\_IRPP & Income Tax Withholding   & 6 & 4 & 0.60 \\
+R6\_PAT  & Business License         & 7 & 3 & 0.70 \\
+R7\_DECL & Annual Declaration       & 6 & 4 & 0.60 \\
+R8\_BANK & Bank Formalization       & 5 & 5 & 0.50 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%% ─────────────────────────────────────────────────────────────
+%% A.2 — DATASET DOCUMENTATION
+%% ─────────────────────────────────────────────────────────────
+
+\subsection{RSI-Togo-Fiscal-Synthetic v2.0}
+
+\paragraph{Overview.}
+The benchmark contains 2{,}000 synthetic enterprises across two
+regulatory periods (2022--2024 and 2025), encoding 8 fiscal rules.
+Each enterprise record is structured in four layers: observable
+features (segment, declared turnover), latent ground truth
+($c_i^*$ per rule), noisy compliance signals with 18\% missing data,
+and binary labels for baseline evaluation only.
+
+\paragraph{Market segments.}
+Enterprises are assigned to four segments reflecting the structure
+of the Togolese market. Turnover follows a log-normal distribution
+within each segment, whose aggregate approximates a power
+law~\citep{gabaix2009power}.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Segment} & \textbf{Share} & \textbf{$\mu_{\log}$}
+  & \textbf{$\sigma_{\log}$} & \textbf{Median CA (FCFA)} \\
+\midrule
+Informal      & 45\% & 16.3 & 0.7 & $\sim$12M \\
+Small formal  & 25\% & 17.6 & 0.5 & $\sim$44M \\
+Medium        & 18\% & 18.6 & 0.4 & $\sim$119M \\
+Large         & 12\% & 20.0 & 0.5 & $\sim$485M \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Under-declaration model.}
+Observed turnover is systematically lower than true turnover:
+\[
+  \hat{x} = x \cdot \underbrace{\beta}_{\text{systematic}} \cdot
+  \underbrace{\varepsilon}_{\text{noise}}, \quad
+  \beta \sim \operatorname{Beta}(7, 3), \quad
+  \varepsilon \sim \mathcal{N}(1,\, 0.04^2)
+\]
+The Beta(7,3) distribution has mean $0.70$ and concentrates mass
+between 0.50 and 0.90, consistent with empirical estimates from
+Sub-Saharan African fiscal studies.
+
+\paragraph{Compliance signals.}
+For each entity $j$ and applicable rule $r_i$, the continuous
+compliance signal is drawn from
+$\operatorname{Beta}(c_{ji} \cdot \kappa,\, (1{-}c_{ji}) \cdot \kappa)$
+with $\kappa = 10$, ensuring an unbiased signal centered on the true
+entity compliance rate: $\mathbb{E}[s_{ji}^{\mathrm{raw}}] = c_{ji}$.
+For R4\_TPU (informal sector), the signal is binary:
+$s_{ji} \sim \operatorname{Bernoulli}(c_{ji})$.
+
+\paragraph{Applicability and rules.}
+Rules R7\_DECL and R8\_BANK apply universally. The remaining 6 rules
+have turnover-based thresholds, ensuring every entity is subject to
+at least 3 rules (K\,$\geq$\,3). The distribution is:
+K\,=\,3 (56\%), K\,=\,5 (15\%), K\,=\,6 (10\%), K\,=\,7 (19\%).
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{llll}
+\toprule
+\textbf{Rule} & \textbf{Description} & \textbf{Condition} & \textbf{Threshold} \\
+\midrule
+R1\_TVA  & Value Added Tax       & CA $\geq$ threshold & 60M (p1), 100M (p2) \\
+R2\_IS   & Corporate Income Tax  & CA $\geq$ threshold & 100M \\
+R3\_IMF  & Minimum Tax           & CA $\geq$ threshold & 60M \\
+R4\_TPU  & Informal Sector Tax   & CA $<$ threshold    & 60M \\
+R5\_IRPP & Income Tax Withholding & CA $\geq$ threshold & 30M \\
+R6\_PAT  & Business License      & CA $\geq$ threshold & 30M \\
+R7\_DECL & Annual Declaration    & Always              & (universal) \\
+R8\_BANK & Bank Formalization    & Always              & (universal) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Regulatory change event.}
+Period~1 (2022--2024) uses a VAT threshold of 60M~FCFA. Period~2
+(2025) uses 100M~FCFA, reflecting Law n\textdegree{}2024-007
+(30~December~2024). This provides a clean natural experiment for
+validating Theorem~\ref{thm:o1}.
+
+\paragraph{Column structure.}
+Each enterprise record contains 48 columns: 6 identifiers and
+features (\texttt{entity\_id}, \texttt{period}, \texttt{segment},
+\texttt{true\_ca}, \texttt{obs\_ca}, \texttt{under\_decl\_ratio}),
+5 columns per rule (applicability, true compliance, raw signal,
+discretized signal, label), and 2 aggregate columns
+(\texttt{label\_any\_nc}, \texttt{n\_applicable}).
+
+%% ─────────────────────────────────────────────────────────────
+%% A.3 — BASELINES
+%% ─────────────────────────────────────────────────────────────
+
+\subsection{Baseline Configurations}
+
+\begin{table}[H]
+\centering
+\caption{Baseline model configurations.}
+\label{tab:baselines}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Parameter} & \textbf{Value} \\
+\midrule
+LR      & solver & lbfgs \\
+        & max\_iter & 1000 \\
+        & feature scaling & StandardScaler \\
+        & train/test split & 70\%/30\%, stratified \\[4pt]
+XGBoost & n\_estimators & 150 \\
+        & max\_depth & 4 \\
+        & learning\_rate & 0.1 (default) \\
+        & train/test split & 70\%/30\%, stratified \\[4pt]
+MLP     & hidden\_layer\_sizes & (128, 64, 32) \\
+        & activation & ReLU \\
+        & max\_iter & 1000 \\
+        & early\_stopping & True \\
+        & learning\_rate & adaptive \\
+        & feature scaling & StandardScaler \\[4pt]
+RBS     & Logic & Flag if $s_{ji}^{\mathrm{disc}} = 0$ for any applicable rule \\
+        & Missing handling & Ignore (no flag) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%% ─────────────────────────────────────────────────────────────
+%% A.4 — REPRODUCIBILITY
+%% ─────────────────────────────────────────────────────────────
+
+\subsection{Reproducibility}
+
+All experiments use a fixed random seed (42) for full deterministic
+reproducibility. The implementation uses Python~3.11 with NumPy,
+SciPy, scikit-learn, and pandas. No GPU is required. The full
+experiment pipeline completes in under 30~seconds on standard
+hardware. The dataset, framework, and all experiment code are
+released publicly under the MIT license.
+
+%% ─────────────────────────────────────────────────────────────
+%% A.5 — DETAILED PROOFS
+%% ─────────────────────────────────────────────────────────────
+
+\subsection{Detailed Proof of Theorem~\ref{thm:o1} ($O(1)$ Adaptability)}
+
+\begin{proof}
+Let $\mathcal{U}_k$ be a regulatory update that changes the parameters
+of rule $r_k$ from $\Theta_k$ to $\Theta_k'$.
+
+\textit{Step 1: Prior factorization.}
+The RSI prior factorizes as
+$P(\mathbf{S}) = \prod_{i=1}^n P(c_i \mid \Theta_i) \cdot P(\delta_i \mid \Theta_i)$.
+The posterior satisfies:
+\[
+  P(\mathbf{S} \mid \mathbf{D}) \propto
+  \prod_{i=1}^n P(\mathbf{D}_i \mid c_i) \cdot P(c_i \mid \Theta_i) \cdot P(\delta_i \mid \Theta_i)
+\]
+After the update $\Theta_k \to \Theta_k'$, only the $k$-th factor
+changes:
+\[
+  P'(\mathbf{S} \mid \mathbf{D}) \propto
+  P(\mathbf{S} \mid \mathbf{D}) \cdot
+  \frac{P(c_k \mid \Theta_k') \cdot P(\delta_k \mid \Theta_k')}
+       {P(c_k \mid \Theta_k) \cdot P(\delta_k \mid \Theta_k)}
+\]
+
+\textit{Step 2: Drift correction.}
+For a threshold change $\theta_k \to \theta_k'$, define
+$\varepsilon = (\theta_k' - \theta_k)/\theta_k$. The drift posterior
+mean updates as $\bar{\mu}_k \leftarrow \bar{\mu}_k - \varepsilon$.
+This is a single scalar subtraction: $O(1)$.
+
+\textit{Step 3: Invariance of compliance parameters.}
+The compliance rate $c_k$ is independent of the threshold magnitude
+(it measures the \emph{proportion} of applicable entities that comply,
+not the threshold itself). Therefore $\bar{\alpha}_k$ and
+$\bar{\beta}_k$ are invariant under $\mathcal{U}_k$. Similarly,
+$\bar{\sigma}_k$ depends on the number of observations and prior
+variance, neither of which changes under $\mathcal{U}_k$.
+
+\textit{Step 4: Normalization.}
+Under conjugate families, the posterior normalization constant
+$B(\bar{\alpha}_k, \bar{\beta}_k)$ is computed analytically and does
+not require re-processing the data. The updated posterior is a
+properly normalized Beta distribution.
+
+\textit{Total cost:} one scalar subtraction ($\bar{\mu}_k$), zero
+data access. $\mathcal{C}^{\mathrm{RSI}}(\mathcal{U}_k) = O(1)$
+with respect to $|\mathbf{D}|$ and $n$. \qed
+\end{proof}
+
+\subsection{Detailed Proof of Theorem~\ref{thm:bvm} (BvM Consistency)}
+
+\begin{proof}
+We prove the result for a single rule $r_i$ (the extension to
+$\mathbf{S}$ follows by factorization).
+
+Let $s_1, s_2, \ldots, s_m$ be i.i.d.\ Bernoulli($c_i^*$) compliance
+signals, where $c_i^* \in (0,1)$ is the true population compliance rate.
+
+\textit{Step 1: Posterior computation.}
+The conjugate posterior is
+$Q^*(c_i) = \operatorname{Beta}(\bar{\alpha}_i, \bar{\beta}_i)$ with
+$\bar{\alpha}_i = \alpha_i + \sum_{j=1}^m s_j$ and
+$\bar{\beta}_i = \beta_i + \sum_{j=1}^m (1-s_j)$.
+
+\textit{Step 2: Posterior mean convergence.}
+Define $\bar{s} = m^{-1}\sum_j s_j$. Then:
+\[
+  \mathbb{E}_Q[c_i] = \frac{\bar{\alpha}_i}{\bar{\alpha}_i + \bar{\beta}_i}
+  = \frac{\alpha_i + m\bar{s}}{\alpha_i + \beta_i + m}
+  \to \bar{s} \to c_i^* \quad (m \to \infty)
+\]
+where the first convergence follows from $m \gg \alpha_i + \beta_i$
+and the second from the strong law of large numbers.
+
+\textit{Step 3: Posterior variance.}
+\[
+  \mathrm{Var}_Q[c_i] = \frac{\bar{\alpha}_i \bar{\beta}_i}
+  {(\bar{\alpha}_i + \bar{\beta}_i)^2 (\bar{\alpha}_i + \bar{\beta}_i + 1)}
+  \sim \frac{c_i^*(1-c_i^*)}{m} \quad (m \to \infty)
+\]
+This is the Bernoulli variance divided by $m$, confirming
+$\sigma[c_i] \sim 1/\sqrt{m}$.
+
+\textit{Step 4: Asymptotic normality.}
+By the central limit theorem, $\sqrt{m}(\bar{s} - c_i^*)
+\xrightarrow{d} \mathcal{N}(0, c_i^*(1-c_i^*))$. Since
+$\mathbb{E}_Q[c_i] \to \bar{s}$ and $\mathrm{Var}_Q[c_i] \to
+c_i^*(1-c_i^*)/m$, we obtain:
+\[
+  \sqrt{m}(\mathbb{E}_Q[c_i] - c_i^*) \xrightarrow{d}
+  \mathcal{N}(0, \mathcal{I}(c_i^*)^{-1})
+\]
+where $\mathcal{I}(c_i^*) = [c_i^*(1-c_i^*)]^{-1}$ is the Fisher
+information of the Bernoulli model. This is the classical
+Bernstein-von Mises theorem applied to the Beta-Bernoulli conjugate
+pair \citep{van2000asymptotic}. \qed
+\end{proof}
+
+%% ─────────────────────────────────────────────────────────────
+%% A.6 — SIGNAL DISCRETIZATION BIAS
+%% ─────────────────────────────────────────────────────────────
+
+\subsection{Signal Discretization and Calibration Bias}
+
+The compliance signal $s_{ji}^{\mathrm{raw}} \in [0,1]$ is unbiased
+by construction:
+$\mathbb{E}[s_{ji}^{\mathrm{raw}}] = c_{ji}$.
+Discretization at threshold $\tau = 0.5$ introduces a systematic bias.
+For an entity with true compliance $c_{ji}$, the probability that the
+discretized signal equals 1 is:
+\[
+  P(s_{ji}^{\mathrm{disc}} = 1) =
+  1 - I_{0.5}(c_{ji} \cdot \kappa,\, (1{-}c_{ji}) \cdot \kappa)
+\]
+where $I_x(a,b)$ is the regularized incomplete Beta function. When
+$c_{ji} > 0.5$, this probability exceeds $c_{ji}$ (the discrete signal
+overestimates compliance). When $c_{ji} < 0.5$, it underestimates.
+The bias is largest for $c_{ji}$ far from 0.5 and decreases as
+$\kappa \to \infty$.
+
+This explains the calibration misses in Table~\ref{tab:calibration}:
+rules with true population compliance far from 0.5 (R3\_IMF at 0.876,
+R7\_DECL at 0.666) exhibit the largest bias, while rules near 0.5
+(R4\_TPU at 0.345, R8\_BANK at 0.491) are well-calibrated.
+
+A natural mitigation is to use continuous signals directly with a
+Beta-likelihood formulation, eliminating discretization entirely while
+preserving conjugacy under moment-matching approximations. This
+extension is developed in future work.
+
+%% ─────────────────────────────────────────────────────────────
+%% A.7 — PRIOR SENSITIVITY ANALYSIS
+%% ─────────────────────────────────────────────────────────────
+
+\subsection{Prior Sensitivity Analysis}
+
+To assess robustness to prior misspecification, we evaluate RSI under
+five prior configurations ranging from domain-informed to deliberately
+adversarial:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Configuration} & \textbf{Prior} & $\mathbb{E}[c_i]$ & \textbf{Rationale} \\
+\midrule
+Correct       & $\mathrm{Beta}(7, 3)$ & 0.70 & Domain-informed (OTR) \\
+Uniform       & $\mathrm{Beta}(1, 1)$ & 0.50 & Maximum ignorance \\
+Inverted      & $\mathrm{Beta}(3, 7)$ & 0.30 & Deliberately wrong direction \\
+Strong wrong  & $\mathrm{Beta}(20, 2)$ & 0.91 & Strong confidence, wrong value \\
+Weak          & $\mathrm{Beta}(2, 2)$ & 0.50 & Weak, symmetric \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Entity-level F1 is perfectly invariant (0.741 across all
+configurations) because entity scoring is deterministic:
+$\mathrm{NC}_{ji} = 1 - s_{ji}^{\mathrm{raw}}$ does not depend on
+the prior. Population posteriors $\mathbb{E}[c_i]$ vary by at most
+0.027 across configurations, confirming that with $n > 400$
+observations per rule, the likelihood dominates the prior. This
+validates the prior robustness corollary of Theorem~\ref{thm:bvm}:
+different initial beliefs converge to the same assessment as evidence
+accumulates.
