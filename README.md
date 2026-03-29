@@ -1,172 +1,122 @@
-# Rule-State Inference (RSI)
+# RSI: Rule-State Inference
+
 ### A Bayesian Framework for Compliance Monitoring in Rule-Governed Domains
 *Evidence from Francophone African Fiscal Systems*
 
 **Abdou-Raouf Atarmla** — Togo DataLab / INPT Rabat
 
 [![arXiv](https://img.shields.io/badge/arXiv-2603.21610-b31b1b.svg)](https://arxiv.org/abs/2603.21610)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fless-lab/rsi-togo-fiscal/blob/master/notebooks/rsi_demo.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fless-lab/rsi-framework/blob/main/experiments/togo-fiscal/walkthrough.ipynb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
 ## What is RSI?
 
-Most ML frameworks for compliance monitoring learn rules from data.
-**RSI inverts this paradigm**: known regulatory rules are encoded as
-Bayesian priors, and compliance monitoring is cast as posterior
-inference over a latent rule-state space.
+Most ML frameworks for compliance monitoring learn rules from data. **RSI inverts this paradigm**: known regulatory rules are encoded as Bayesian priors, and compliance monitoring is cast as posterior inference over a latent rule-state space.
 
-Each rule $r_i$ has a latent state $s_i = (a_i, c_i, \delta_i)$ where:
-- $a_i \in \{0,1\}$ — is the rule currently in force?
-- $c_i \in [0,1]$ — what is the compliance rate?
-- $\delta_i \in \mathbb{R}$ — how much have the rule parameters drifted?
+RSI operates at **two complementary levels**:
 
-Three theoretical guarantees are proven:
-- **T1** — Regulatory changes are absorbed in $O(1)$ time (no retraining)
-- **T2** — Bernstein-von Mises posterior consistency
+- **Population-level Bayesian inference** estimates the compliance rate for each rule across the population, with calibrated uncertainty. *"63% of taxpayers comply with VAT, ± 3%."*
+
+- **Entity-level deterministic scoring** identifies non-compliant entities per rule using continuous compliance signals, without any labeled data. The aggregation strategy (flag if 1 rule violated, 2+, etc.) is a domain policy choice.
+
+> **On individual Bayesian inference:** The current version provides deterministic entity scoring. *Sequential RSI*, where the posterior at period *t* becomes the prior at *t+1*, will enable full entity-level Bayesian tracking over time. This is the natural next step and is under active development.
+
+**Three theoretical guarantees** are proven:
+- **T1** — Regulatory changes absorbed in O(1) time (no retraining)
+- **T2** — Bernstein-von Mises posterior consistency (uncertainty shrinks at 1/√N)
 - **T3** — Monotone ELBO convergence under mean-field VI
 
 ---
 
-## Key Results
+## Key Results (Togo Fiscal Instance)
 
-| Model | F1 | AUC | Labels needed? | Update cost |
-|---|---|---|---|---|
-| **RSI (ours)** | **0.519** | **0.599** | **No** | **< 1ms** |
-| Rule-Based System | 0.182 | — | No | ~0ms |
-| XGBoost† | 0.967 | 0.999 | Yes | 683–1082ms retrain |
-| MLP† | 0.322 | 0.788 | Yes | 102–146ms retrain |
+### Per-Rule Performance (zero-shot, no labels)
 
-†Full supervision required. RSI operates zero-shot.
+| Rule | RSI F1 | RSI AUC | RBS F1 | Advantage |
+|------|--------|---------|--------|-----------|
+| R1_TVA | 0.865 | 0.874 | 0.765 | +0.100 |
+| R2_IS | 0.739 | 0.892 | 0.740 | -0.001 |
+| R3_IMF | 0.545 | 0.914 | 0.541 | +0.005 |
+| R4_TPU | 0.825 | 0.691 | 0.720 | +0.105 |
+| R5_IRPP | 0.690 | 0.879 | 0.690 | +0.000 |
+| R6_PAT | 0.841 | 0.876 | 0.783 | +0.058 |
+| R7_DECL | 0.630 | 0.879 | 0.621 | +0.009 |
+| R8_BANK | 0.791 | 0.867 | 0.739 | +0.053 |
+| **Mean** | **0.741** | **0.859** | **0.700** | **+0.041** |
 
-**At least 600× speedup** over full retraining on regulatory change events.
-Absolute timings are hardware-dependent; the O(1) complexity guarantee is machine-independent.
-
----
-
-## Repository Structure
-
-```
-rsi-togo-fiscal/
-├── paper/
-│   ├── latex/
-│   │   ├── rsi_paper_en.tex
-│   │   ├── rsi_paper_fr.tex
-│   │   ├── rsi_paper_appendix_en.tex
-│   │   └── rsi_paper_appendix_fr.tex
-│   └── pdf/
-│       ├── rsi_paper_en.pdf
-│       ├── rsi_paper_fr.pdf
-│       ├── rsi_paper_appendix_en.pdf
-│       └── rsi_paper_appendix_fr.pdf
-├── data/
-│   └── rsi_dataset.csv           # RSI-Togo-Fiscal-Synthetic v1.0
-├── src/
-│   ├── rsi_engine.py             # RSI inference engine
-│   ├── rsi_baselines.py          # XGBoost, MLP, RBS baselines
-│   └── rsi_experiments.py        # Full experiment pipeline
-├── notebooks/
-│   └── rsi_demo.ipynb            # Interactive demonstration
-├── tests/
-│   └── evaluate_single_company.py
-├── rsi_results.png               # Experimental results figure
-└── requirements.txt
-```
+- **T1:** RSI absorbs regulatory changes in ~0.002ms vs ~1,000ms for retraining (around 500,000x speedup; exact ratio is hardware-dependent, the O(1) guarantee is machine-independent)
+- **T2:** Posterior uncertainty decreases at 1/√N (ratios 1.86-2.03 vs theoretical 2.0)
+- **T3:** ELBO gain = +815, monotone, converges in 1 sweep
+- **Missing data:** At 50% missing, RSI advantage over RBS widens to +0.25-0.37 per rule
 
 ---
 
-## Quickstart
+## Quick Start
 
 ```bash
-git clone https://github.com/fless-lab/rsi-togo-fiscal
-cd rsi-togo-fiscal
-pip install -r requirements.txt
-
-# Run a single inference
-python tests/evaluate_single_company.py
-
-# Run all experiments
-python src/rsi_experiments.py
-
-# Interactive demo
-jupyter notebook notebooks/rsi_demo.ipynb
+pip install numpy scipy scikit-learn pandas
+python experiments/togo-fiscal/run.py
 ```
 
 ---
 
-## Experimental Results
+## Dataset: RSI-Togo-Fiscal-Synthetic v2.0
 
-![RSI Experimental Results](rsi_results.png)
+2,000 synthetic enterprises across 2 regulatory periods, grounded in real OTR fiscal rules (2022-2025):
+
+- **8 fiscal rules** (6 threshold-based + 2 universal)
+- **4 market segments** (informal 45%, small formal 25%, medium 18%, large 12%)
+- **Realistic noise:** under-declaration ratio ~0.70, 18% missing data
+- **Regulatory change event:** VAT threshold 60M → 100M FCFA (Law n°2024-007)
+- **Fully reproducible:** seed=42
 
 ---
 
-## Single Inference Example
+## Applying RSI to a New Domain
+
+RSI is domain-agnostic. The core (`src/core.py`) never changes. You only write a domain adapter. Example for medical protocol compliance:
 
 ```python
-import sys
-sys.path.insert(0, "src")
-from rsi_engine import RSIEngine
+from core import PopulationRSI, EntityScorer
 
-engine = RSIEngine.for_togo(period="2022_2024")
-
-obs = {
-    "obs_ca_declare": 72_000_000,
-    "obs_tva_declaree": 0,
-    "obs_tva_missing": False,
-    "obs_tva_assujetti_declare": False,
-    "obs_retard_paiement_jours": 45,
-    "obs_has_compte_bancaire": True,
-    "obs_utilise_facturation_electronique": False,
-    "obs_is_declare": 0,
-    "obs_is_missing": True,
-    "obs_benefice_declare": 0,
-    "obs_benefice_missing": True,
-    "obs_ratio_sous_declaration": 0.75,
+# 1. Define rules as priors (institutional knowledge)
+priors = {
+    'HbA1c_control':   {'alpha': 6, 'beta': 4, 'sigma_drift': 1.0},
+    'Annual_eye_exam': {'alpha': 5, 'beta': 5, 'sigma_drift': 0.5},
+    'Metformin_first': {'alpha': 7, 'beta': 3, 'sigma_drift': 0.5},
 }
 
-result = engine.predict_compliance(obs)
-print(f"Global compliance score : {result['global_score']}")
-print(f"Alerts                  : {result['alerts']}")
+# 2. Compliance signals: 1 = compliant, 0 = non-compliant, NaN = unknown
+signals = {
+    'HbA1c_control':   {'patient_001': 1, 'patient_002': 0, 'patient_003': float('nan')},
+    'Annual_eye_exam': {'patient_001': float('nan'), 'patient_002': 1, 'patient_003': 0},
+    'Metformin_first': {'patient_001': 1, 'patient_002': 1, 'patient_003': 0},
+}
+
+# 3. Applicability: which rules apply to which entities
+applicability = {
+    'HbA1c_control':   {'patient_001': True, 'patient_002': True, 'patient_003': True},
+    'Annual_eye_exam': {'patient_001': True, 'patient_002': True, 'patient_003': False},
+    'Metformin_first': {'patient_001': True, 'patient_002': True, 'patient_003': True},
+}
+
+# 4. Run
+rsi = PopulationRSI(priors)
+results = rsi.fit(signals, applicability)
+
+# Population result: E[c_HbA1c] = 0.63 ± 0.04
+# "63% of diabetic patients have controlled HbA1c, with calibrated uncertainty"
+for rule, post in results['population'].items():
+    print(f"{rule}: E[c]={post['E_c']:.3f} ± {post['std_c']:.3f}")
 ```
 
----
-
-## The Dataset: RSI-Togo-Fiscal-Synthetic v1.0
-
-2,000 synthetic enterprises grounded in real OTR regulatory rules
-(2022–2025). Features:
-
-- **5 fiscal rules**: VAT (18%), CIT (29%), IMF (1%), TPU, IRPP suspension
-- **Regulatory change event**: VAT threshold 60M → 100M FCFA
-  (Law n°2024-007, 30 December 2024)
-- **Realistic noise**: mean under-declaration ratio 0.70,
-  18–20% missing data
-- **Power-law CA distribution**: 60% informal, 25% SME, 15% large
-
-Each row contains latent ground truth $(a_i, c_i, \delta_i)$,
-noisy observations, and derived binary labels.
-
----
-
-## Reproducing the Paper Results
-
-```bash
-python src/rsi_experiments.py
-
-# Expected outputs:
-# EXP-1: RSI F1=0.519, AUC=0.599 (zero-shot, no labels)
-# EXP-2: RSI update < 1ms vs XGBoost 683-1082ms retrain (at least 600×)
-# EXP-3: BvM consistency — general decreasing uncertainty trend
-# EXP-4: RSI F1 stable under 50% missing data
-# EXP-5: ELBO converges in 7 iterations (T3 confirmed)
-```
+Any domain with (i) known rules, (ii) observable signals, (iii) definable applicability is a candidate. Immediate extensions include environmental regulation, anti-money-laundering, and legal contract monitoring.
 
 ---
 
 ## Citing
-
-If you use this work, please cite:
 
 ```bibtex
 @article{atarmla2026rsi,
@@ -183,13 +133,8 @@ If you use this work, please cite:
 
 ## License
 
-MIT License — see `LICENSE` for details.
-
----
+MIT — see [LICENSE](LICENSE).
 
 ## Contact
 
-Abdou-Raouf Atarmla —
-[achilleatarmla@gmail.com](mailto:achilleatarmla@gmail.com) |
-[abdou-raouf.atarmla@datalab.gouv.tg](mailto:abdou-raouf.atarmla@datalab.gouv.tg) |
-[atarmla.abdouraouf@ine.inpt.ac.ma](mailto:atarmla.abdouraouf@ine.inpt.ac.ma)
+Abdou-Raouf Atarmla — [achilleatarmla@gmail.com](mailto:achilleatarmla@gmail.com) | [abdou-raouf.atarmla@datalab.gouv.tg](mailto:abdou-raouf.atarmla@datalab.gouv.tg) | [atarmla.abdouraouf@ine.inpt.ac.ma](mailto:atarmla.abdouraouf@ine.inpt.ac.ma)
